@@ -5,6 +5,7 @@ A safety-focused community fork of [hyperfield/ai-file-sorter](https://github.co
 FileSort Guard keeps the upstream local/remote LLM clients, review workflow, undo history, and cross-platform Qt application, while changing the interactive AI organization flow to be folder-oriented:
 
 - **One-request folder AI** — list the selected folder once and ask the model to categorize the whole inventory in one structured JSON response.
+- **Safe new-folder proposals** — when no whitelist is active, AI may propose new category/subcategory folders; they are created only after the user reviews and approves the plan.
 - **Optional recursion** — the existing subdirectory option controls whether the batch inventory includes nested items.
 - **Custom AI models** — use OpenAI, Gemini, built-in local models, custom GGUF models, or any configured OpenAI-compatible endpoint such as vLLM/Ollama/LM Studio.
 - **Editable batch prompt** — view, edit, preview, enable/disable, and restore the prompt used for the single folder request.
@@ -58,6 +59,8 @@ The main screen now exposes two independent organization modes:
 - **Rule mode** — does not call an LLM.
 
 The **AI model…** button opens the existing model selector. It supports remote OpenAI/Gemini, custom OpenAI-compatible APIs with a user-defined base URL/model/API key, custom local GGUF models, and the built-in local models.
+
+If no category whitelist is enabled, AI may reuse a suitable existing category or propose a new category/subcategory. A proposed category is only a directory label: FileSort Guard creates the corresponding folder under the selected root **after review and explicit approval**. AI is not allowed to provide arbitrary destination paths. When a whitelist is enabled, the model must stay within that whitelist.
 
 This fork intentionally does **not** add embeddings, vector databases, hybrid routing, or automatic AI fallback.
 
@@ -191,6 +194,8 @@ The upstream model clients are reused. The interactive GUI orchestration is chan
 ## Build from source
 
 The application remains a **C++20 + Qt 6 + CMake** project.
+
+For the current development stage, GitHub Actions is intentionally limited to **Ubuntu 24.04 amd64**. Other Linux distributions, Windows, and macOS builds will be re-enabled after the Ubuntu package has been tested.
 
 Clone this fork:
 
