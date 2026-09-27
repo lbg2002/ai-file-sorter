@@ -1401,6 +1401,7 @@ void MainApp::schedule_backend_status_label_refresh()
 void MainApp::on_language_selected(Language language)
 {
     settings.set_language(language);
+    settings.save();
     TranslationManager::instance().set_language(language);
     if (ui_translator_) {
         ui_translator_->update_language_checks();
