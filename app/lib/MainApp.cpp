@@ -29,6 +29,7 @@
 #include "WhatsNewContent.hpp"
 #include "CategoryLanguage.hpp"
 #include "CategoryLanguageSupport.hpp"
+#include "BatchFolderCategorizer.hpp"
 #include "MainAppUiBuilder.hpp"
 #include "PromptEditorDialog.hpp"
 #include "PromptTemplateStore.hpp"
@@ -1596,7 +1597,7 @@ void MainApp::on_analyze_clicked()
 
         analyze_thread = std::thread([this]() {
             try {
-                perform_analysis();
+                perform_batch_ai_analysis();
             } catch (const std::exception& ex) {
                 core_logger->error("Exception during analysis: {}", ex.what());
                 post_analysis_failure(std::string("Analysis error: ") + ex.what());
@@ -2942,6 +2943,76 @@ AnalysisWorkflowContext MainApp::make_analysis_workflow_context()
         [this](const CategorizedFile& entry, const std::string& reason) {
             notify_recategorization_reset(entry, reason);
         }};
+}
+
+void MainApp::perform_batch_ai_analysis()
+{
+    if (stop_analysis.load()) {
+        const QPointer<MainApp> app(this);
+        QMetaObject::invokeMethod(this, [app]() {
+            if (app) {
+                app->handle_analysis_cancelled();
+            }
+        }, Qt::QueuedConnection);
+        return;
+    }
+
+    if (last_scan_snapshot_.empty()) {
+        throw std::runtime_error("The selected folder contains no items matching the current scan options.");
+    }
+
+    report_progress(fmt::format(
+        "[BATCH] Sending {} item(s) from the selected folder in one AI request{}.",
+        last_scan_snapshot_.size(),
+        settings.get_include_subdirectories() ? " (recursive)" : ""));
+
+    BatchFolderCategorizationOptions options;
+    options.folder_path = get_folder_path();
+    options.recursive = settings.get_include_subdirectories();
+    options.use_subcategories = settings.get_use_subcategories();
+    options.category_language = categoryLanguageDisplay(settings.get_category_language());
+    options.prefer_stable_categories = settings.get_use_consistency_hints();
+    if (settings.get_use_whitelist()) {
+        options.allowed_categories = settings.get_allowed_categories();
+        options.allowed_subcategories_by_category =
+            settings.get_allowed_subcategories_by_category();
+    }
+
+    auto llm = make_llm_client();
+    BatchFolderCategorizer categorizer;
+    const BatchFolderCategorizationResult batch =
+        categorizer.categorize(*llm, last_scan_snapshot_, options);
+
+    if (stop_analysis.load()) {
+        const QPointer<MainApp> app(this);
+        QMetaObject::invokeMethod(this, [app]() {
+            if (app) {
+                app->handle_analysis_cancelled();
+            }
+        }, Qt::QueuedConnection);
+        return;
+    }
+
+    already_categorized_files.clear();
+    files_to_categorize = last_scan_snapshot_;
+    new_files_with_categories = batch.files;
+    new_files_to_sort = batch.files;
+
+    report_progress(fmt::format(
+        "[BATCH] AI returned {} structured row(s) for {} scanned item(s). "
+        "The review screen will verify omissions, duplicates, invented ids, and destination conflicts.",
+        batch.returned_count,
+        batch.requested_count));
+
+    const QPointer<MainApp> app(this);
+    QMetaObject::invokeMethod(
+        this,
+        [app]() {
+            if (app) {
+                app->handle_analysis_finished();
+            }
+        },
+        Qt::QueuedConnection);
 }
 
 void MainApp::perform_analysis()
