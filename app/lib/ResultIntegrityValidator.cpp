@@ -32,7 +32,16 @@ std::string normalize_path(const std::string& value)
 
 std::string destination_name_for(const CategorizedFile& file)
 {
-    return file.suggested_name.empty() ? file.file_name : file.suggested_name;
+    if (file.suggested_name.empty() || file.suggested_name == file.file_name) {
+        return file.file_name;
+    }
+
+    const fs::path original = Utils::utf8_to_path(file.file_name);
+    const fs::path suggested = Utils::utf8_to_path(file.suggested_name);
+    if (!suggested.has_extension() && original.has_extension()) {
+        return Utils::path_to_utf8(suggested) + Utils::path_to_utf8(original.extension());
+    }
+    return file.suggested_name;
 }
 
 } // namespace
