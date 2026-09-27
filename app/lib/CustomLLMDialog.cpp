@@ -1,4 +1,5 @@
 #include "CustomLLMDialog.hpp"
+#include "AppTheme.hpp"
 
 #include <QDialogButtonBox>
 #include <QFileDialog>
@@ -14,6 +15,7 @@
 CustomLLMDialog::CustomLLMDialog(QWidget* parent)
     : QDialog(parent)
 {
+    setStyleSheet(AppTheme::utility_dialog_style_sheet(palette()));
     setup_ui();
     wire_signals();
 }
@@ -21,6 +23,7 @@ CustomLLMDialog::CustomLLMDialog(QWidget* parent)
 CustomLLMDialog::CustomLLMDialog(QWidget* parent, const CustomLLM& existing)
     : QDialog(parent)
 {
+    setStyleSheet(AppTheme::utility_dialog_style_sheet(palette()));
     setup_ui();
     wire_signals();
     apply_existing(existing);
