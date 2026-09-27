@@ -4,7 +4,6 @@
 #include "AppTheme.hpp"
 
 #include <QCheckBox>
-#include <QCoreApplication>
 #include <QDialogButtonBox>
 #include <QLabel>
 #include <QMessageBox>
@@ -12,19 +11,12 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 
-namespace {
-QString prompt_editor_tr(const char* source)
-{
-    return QCoreApplication::translate("PromptEditorDialog", source);
-}
-}
-
 PromptEditorDialog::PromptEditorDialog(QWidget* parent)
     : QDialog(parent)
 {
     setObjectName(QStringLiteral("fileSortGuardUtilityDialog"));
     setStyleSheet(AppTheme::utility_dialog_style_sheet(palette()));
-    setWindowTitle(prompt_editor_tr("AI Prompt Editor"));
+    setWindowTitle(tr("AI Prompt Editor"));
     resize(760, 560);
 
     auto* layout = new QVBoxLayout(this);
