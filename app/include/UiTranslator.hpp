@@ -43,6 +43,10 @@ public:
         QPointer<QPushButton>& browse_button;
         QPointer<QPushButton>& analyze_button;
         QPointer<QCheckBox>& use_subcategories_checkbox;
+        QPointer<QLabel>& organization_mode_heading;
+        QPointer<QRadioButton>& organization_mode_ai_radio;
+        QPointer<QRadioButton>& organization_mode_rules_radio;
+        QPointer<QPushButton>& ai_model_button;
         QPointer<QLabel>& categorization_style_heading;
         QPointer<QRadioButton>& categorization_style_refined_radio;
         QPointer<QRadioButton>& categorization_style_consistent_radio;
@@ -100,6 +104,8 @@ public:
         QAction*& delete_action;
         QAction*& toggle_explorer_action;
         QAction*& toggle_llm_action;
+        QAction*& edit_prompt_action;
+        QAction*& manage_rules_action;
         QAction*& manage_storage_plugins_action;
         QAction*& windows_explorer_extension_install_action;
         QAction*& windows_explorer_extension_settings_action;
