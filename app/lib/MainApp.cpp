@@ -1554,6 +1554,7 @@ void MainApp::on_analyze_clicked()
     }
 
     try {
+        last_scan_root_ = folder_path;
         last_scan_snapshot_ = results_coordinator.list_directory(folder_path, effective_scan_options());
     } catch (const std::exception& ex) {
         show_error_dialog(fmt::format("Could not capture the filesystem snapshot: {}", ex.what()));
@@ -2967,7 +2968,7 @@ void MainApp::perform_batch_ai_analysis()
         settings.get_include_subdirectories() ? " (recursive)" : ""));
 
     BatchFolderCategorizationOptions options;
-    options.folder_path = get_folder_path();
+    options.folder_path = last_scan_root_;
     options.recursive = settings.get_include_subdirectories();
     options.use_subcategories = settings.get_use_subcategories();
     options.category_language = categoryLanguageDisplay(settings.get_category_language());
