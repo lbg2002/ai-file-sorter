@@ -1,10 +1,62 @@
 #include "BatchFolderCategorizer.hpp"
+#include "ILLMClient.hpp"
 #include "PromptTemplateStore.hpp"
 
 #include "TestHelpers.hpp"
 #include <catch2/catch_test_macros.hpp>
 
 #include <filesystem>
+
+
+namespace {
+
+class CountingBatchClient final : public ILLMClient {
+public:
+    int complete_calls{0};
+    std::string last_prompt;
+
+    std::string categorize_file(const std::string&,
+                                const std::string&,
+                                FileType,
+                                const std::string&) override
+    {
+        throw std::runtime_error("per-file categorization must not be used by batch mode");
+    }
+
+    std::string complete_prompt(const std::string& prompt, int) override
+    {
+        ++complete_calls;
+        last_prompt = prompt;
+        return R"({"items":[{"id":0,"category":"Documents","subcategory":"Text","suggested_name":""},{"id":1,"category":"Research","subcategory":"Papers","suggested_name":""}]})";
+    }
+
+    void set_prompt_logging_enabled(bool) override {}
+};
+
+} // namespace
+
+TEST_CASE("Folder batch categorization calls the LLM exactly once")
+{
+    TempDir temp;
+    const auto root = temp.path();
+    std::vector<FileEntry> entries{
+        {(root / "a.txt").string(), "a.txt", FileType::File},
+        {(root / "paper.pdf").string(), "paper.pdf", FileType::File},
+    };
+
+    BatchFolderCategorizationOptions options;
+    options.folder_path = root.string();
+    options.use_subcategories = true;
+
+    CountingBatchClient client;
+    BatchFolderCategorizer categorizer;
+    const auto result = categorizer.categorize(client, entries, options);
+
+    REQUIRE(client.complete_calls == 1);
+    REQUIRE(client.last_prompt.find("\"id\":0") != std::string::npos);
+    REQUIRE(client.last_prompt.find("\"id\":1") != std::string::npos);
+    REQUIRE(result.files.size() == 2);
+}
 
 TEST_CASE("BatchFolderCategorizer parses one structured response for a folder")
 {
