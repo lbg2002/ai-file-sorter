@@ -91,7 +91,17 @@ std::string PromptTemplateStore::default_template()
         "Categorization constraints:\n{{context}}\n"
         "Inventory JSON (the numeric id is the only source identifier you may return):\n"
         "{{inventory_json}}\n\n"
-        "Return JSON only, with exactly this shape:\n{{output_schema}}\n"
+        "Return JSON only, with exactly this shape:\n{{output_schema}}\n\n"
+        "Concrete example:\n"
+        "Input inventory:\n"
+        "[{\"id\":0,\"relative_path\":\"paper.pdf\",\"name\":\"paper.pdf\",\"type\":\"file\",\"extension\":\".pdf\"},"
+        "{\"id\":1,\"relative_path\":\"meeting-notes.docx\",\"name\":\"meeting-notes.docx\",\"type\":\"file\",\"extension\":\".docx\"}]\n"
+        "Valid response:\n"
+        "{\"items\":["
+        "{\"id\":0,\"category\":\"Research\",\"subcategory\":\"Papers\",\"suggested_name\":\"\"},"
+        "{\"id\":1,\"category\":\"Meetings\",\"subcategory\":\"Notes\",\"suggested_name\":\"\"}"
+        "]}\n"
+        "The first non-whitespace character of your reply must be { and the last must be }.\n"
         "Rules:\n"
         "1. Return every input id exactly once. Never invent an id and never omit an id.\n"
         "2. Do not return source paths, destination paths, delete operations, overwrite operations, or shell commands.\n"
@@ -152,8 +162,13 @@ std::string PromptTemplateStore::render_batch(const std::string& folder_path,
         rendered += "\n\nReturn JSON only using this schema:\n{{output_schema}}";
     }
     rendered +=
-        "\n\nMandatory safety contract: use only input numeric ids; return each selected id at most once; "
-        "never invent source paths, destination paths, delete operations, overwrite operations, or shell commands.";
+        "\n\nMandatory output contract:\n"
+        "- Reply with JSON only. No prose, no Markdown fence, no analysis before or after the JSON.\n"
+        "- The first non-whitespace character must be { and the last must be }.\n"
+        "- Exact shape: {\"items\":[{\"id\":0,\"category\":\"Documents\",\"subcategory\":\"Reports\",\"suggested_name\":\"\"}]}\n"
+        "- Example for two items: {\"items\":[{\"id\":0,\"category\":\"Research\",\"subcategory\":\"Papers\",\"suggested_name\":\"\"},{\"id\":1,\"category\":\"Meetings\",\"subcategory\":\"Notes\",\"suggested_name\":\"\"}]}\n"
+        "- Use only input numeric ids; return each selected id at most once.\n"
+        "- Never invent source paths, destination paths, delete operations, overwrite operations, or shell commands.";
 
     replace_all(rendered, "{{folder_path}}", folder_path);
     replace_all(rendered, "{{inventory_json}}", inventory_json);
