@@ -1562,7 +1562,11 @@ void MainApp::on_analyze_clicked()
     }
 
     if (!using_local_llm) {
-        if (!Utils::is_network_available()) {
+        const bool custom_openai_compatible =
+            settings.get_llm_choice() == LLMChoice::Remote_Custom;
+        // A custom OpenAI-compatible endpoint may be a local vLLM/Ollama/LM
+        // Studio server on an isolated LAN, so do not require public Internet.
+        if (!custom_openai_compatible && !Utils::is_network_available()) {
             show_error_dialog(ERR_NO_INTERNET_CONNECTION);
             core_logger->warn("Network unavailable when attempting to analyze '{}'", folder_path);
             return;
