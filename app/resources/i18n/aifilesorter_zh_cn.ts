@@ -476,12 +476,12 @@ Edit the affected category/name, or deselect one side of a duplicate/conflict, t
     <message>
         <location filename="../../lib/CustomApiDialog.cpp" line="42"/>
         <source>e.g. llama-3.1, gpt-4o-mini</source>
-        <translation>例如美洲驼-3.1，gpt-4o-迷你</translation>
+        <translation>例如 llama-3.1、gpt-4o-mini</translation>
     </message>
     <message>
         <location filename="../../lib/CustomApiDialog.cpp" line="47"/>
         <source>Show</source>
-        <translation>展示</translation>
+        <translation>显示</translation>
     </message>
     <message>
         <location filename="../../lib/CustomApiDialog.cpp" line="54"/>
@@ -496,7 +496,7 @@ Edit the affected category/name, or deselect one side of a duplicate/conflict, t
     <message>
         <location filename="../../lib/CustomApiDialog.cpp" line="56"/>
         <source>Base URL or endpoint</source>
-        <translation>基点 URL 或端点</translation>
+        <translation>Base URL 或端点</translation>
     </message>
     <message>
         <location filename="../../lib/CustomApiDialog.cpp" line="57"/>
@@ -506,12 +506,42 @@ Edit the affected category/name, or deselect one side of a duplicate/conflict, t
     <message>
         <location filename="../../lib/CustomApiDialog.cpp" line="58"/>
         <source>API key (optional)</source>
-        <translation>API键（可选）</translation>
+        <translation>API Key（可选）</translation>
     </message>
     <message>
         <location filename="../../lib/CustomApiDialog.cpp" line="62"/>
         <source>Enter a base URL (e.g. http://localhost:1234/v1) or a full /chat/completions endpoint.</source>
-        <translation>输入基本 URL（例如 http://localhost:1234/v1) 或完整的 /chat/completions 端点。</translation>
+        <translation>请输入 Base URL（例如 http://localhost:1234/v1），或完整的 /chat/completions 端点。</translation>
+    </message>
+    <message>
+        <source>Test connection</source>
+        <translation>测试连接</translation>
+    </message>
+    <message>
+        <source>Testing…</source>
+        <translation>测试中…</translation>
+    </message>
+    <message>
+        <source>Connection successful</source>
+        <translation>连接成功</translation>
+    </message>
+    <message>
+        <source>The endpoint responded successfully. Model reply:
+%1</source>
+        <translation>端点已成功响应。模型返回：
+%1</translation>
+    </message>
+    <message>
+        <source>Connection failed</source>
+        <translation>连接失败</translation>
+    </message>
+    <message>
+        <source>Could not complete a test request.
+
+%1</source>
+        <translation>测试请求未能完成。
+
+%1</translation>
     </message>
 </context>
 <context>
