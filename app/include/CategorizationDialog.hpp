@@ -119,6 +119,9 @@ public:
      * @param auto_approve_categorization Whether actionable categorization rows should be preselected.
      */
     void set_integrity_report(ResultIntegrityReport report);
+    void set_integrity_context(std::vector<FileEntry> snapshot,
+                               std::string base_dir,
+                               bool use_subcategories);
     void show_results(const std::vector<CategorizedFile>& categorized_files,
                       const std::string& base_dir_override = std::string(),
                       bool include_subdirectories = false,
@@ -197,6 +200,8 @@ private:
     void setup_ui();
     void populate_model();
     void update_integrity_summary();
+    std::vector<CategorizedFile> selected_integrity_results() const;
+    bool validate_integrity_before_apply();
     void ensure_unique_suggested_names_in_model();
     /**
      * @brief Persist reviewed categorization results and optionally record approved learning examples.
@@ -425,6 +430,10 @@ private:
     std::vector<MoveRecord> move_history_;
     std::vector<PreviewRecord> dry_run_plan_;
     ResultIntegrityReport integrity_report_;
+    std::vector<FileEntry> integrity_snapshot_;
+    std::string integrity_base_dir_;
+    bool integrity_use_subcategories_{true};
+    bool integrity_context_enabled_{false};
 
     bool updating_select_all{false};
     bool suppress_item_changed_{false};
