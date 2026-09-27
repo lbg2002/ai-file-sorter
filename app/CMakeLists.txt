@@ -1559,6 +1559,7 @@ if(AI_FILE_SORTER_BUILD_TESTS)
         "${CMAKE_CURRENT_SOURCE_DIR}/../tests/unit/test_categorization_dialog.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/../tests/unit/test_result_integrity_validator.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/../tests/unit/test_rule_engine.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../tests/unit/test_batch_folder_categorizer.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/../tests/unit/test_review_file_naming.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/../tests/unit/test_review_name_validator.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/../tests/unit/test_review_history_store.cpp"
