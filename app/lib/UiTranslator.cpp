@@ -55,6 +55,10 @@ constexpr auto kActionPaste = QT_TRANSLATE_NOOP("UiTranslator", "&Paste");
 constexpr auto kActionDelete = QT_TRANSLATE_NOOP("UiTranslator", "&Delete");
 constexpr auto kActionFileExplorer = QT_TRANSLATE_NOOP("UiTranslator", "File &Explorer");
 constexpr auto kActionSelectLlm = QT_TRANSLATE_NOOP("UiTranslator", "Select &LLM…");
+constexpr auto kActionEditAiPrompt =
+    QT_TRANSLATE_NOOP("UiTranslator", "Edit AI Prompt…");
+constexpr auto kActionManageFileRules =
+    QT_TRANSLATE_NOOP("UiTranslator", "Manage File Rules…");
 constexpr auto kActionManageStoragePlugins =
     QT_TRANSLATE_NOOP("UiTranslator", "Manage storage plugins…");
 constexpr auto kActionManageCategoryWhitelists =
@@ -199,6 +203,21 @@ void UiTranslator::translate_primary_controls(bool analysis_in_progress) const
     if (auto* checkbox = raw_ptr(deps_.primary.use_subcategories_checkbox)) {
         checkbox->setText(tr("Use subcategories"));
         checkbox->setToolTip(tr("Create subcategory folders within each category."));
+    }
+    if (auto* heading = raw_ptr(deps_.primary.organization_mode_heading)) {
+        heading->setText(tr("Organization mode"));
+    }
+    if (auto* radio = raw_ptr(deps_.primary.organization_mode_ai_radio)) {
+        radio->setText(tr("AI mode (one request per folder)"));
+        radio->setToolTip(tr("Send the selected folder inventory to the chosen AI model in one structured request."));
+    }
+    if (auto* radio = raw_ptr(deps_.primary.organization_mode_rules_radio)) {
+        radio->setText(tr("Rule mode"));
+        radio->setToolTip(tr("Organize files with deterministic rules without calling an AI model."));
+    }
+    if (auto* button = raw_ptr(deps_.primary.ai_model_button)) {
+        button->setText(tr("AI model…"));
+        button->setToolTip(tr("Choose or configure the AI model used for folder organization."));
     }
     if (auto* heading = raw_ptr(deps_.primary.categorization_style_heading)) {
         heading->setText(tr("Categorization type"));
@@ -373,6 +392,8 @@ void UiTranslator::translate_menus_and_actions() const
         {deps_.actions.delete_action, kActionDelete},
         {deps_.actions.toggle_explorer_action, kActionFileExplorer},
         {deps_.actions.toggle_llm_action, kActionSelectLlm},
+        {deps_.actions.edit_prompt_action, kActionEditAiPrompt},
+        {deps_.actions.manage_rules_action, kActionManageFileRules},
         {deps_.actions.manage_storage_plugins_action, kActionManageStoragePlugins},
         {deps_.actions.windows_explorer_extension_install_action, kActionInstallWindowsExplorerExtension},
         {deps_.actions.windows_explorer_extension_settings_action, kActionWindowsExplorerExtensionSettings},
