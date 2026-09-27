@@ -146,8 +146,8 @@ void CustomApiDialog::test_connection()
             20L);
 
         const std::string reply = client.complete_prompt(
-            "Return exactly this JSON object and nothing else: {\"ok\":true}",
-            64);
+            "Do not spend output tokens on reasoning. Return exactly this JSON object and nothing else: {\"ok\":true}",
+            1024);
 
         QMessageBox::information(
             this,
