@@ -243,7 +243,60 @@ std::string parse_category_response(const std::string& payload,
         throw std::runtime_error("Response Error: Failed to parse JSON response. " + errors);
     }
 
-    return root["choices"][0]["message"]["content"].asString();
+    const Json::Value& choices = root["choices"];
+    if (choices.isArray() && !choices.empty()) {
+        const Json::Value& choice = choices[0];
+        const Json::Value& message = choice["message"];
+
+        if (message.isObject()) {
+            const Json::Value& content = message["content"];
+            if (content.isString() && !trim_ws(content.asString()).empty()) {
+                return content.asString();
+            }
+
+            if (content.isArray()) {
+                std::string combined;
+                for (const auto& part : content) {
+                    if (part.isString()) {
+                        combined += part.asString();
+                    } else if (part.isObject() && part["text"].isString()) {
+                        combined += part["text"].asString();
+                    }
+                }
+                if (!trim_ws(combined).empty()) {
+                    return combined;
+                }
+            }
+
+            const Json::Value& reasoning = message["reasoning_content"];
+            if (reasoning.isString() && !trim_ws(reasoning.asString()).empty()) {
+                if (logger) {
+                    logger->warn("Remote LLM returned empty content; using reasoning_content fallback.");
+                }
+                return reasoning.asString();
+            }
+        }
+
+        if (choice["text"].isString() && !trim_ws(choice["text"].asString()).empty()) {
+            return choice["text"].asString();
+        }
+    }
+
+    if (root["response"].isString() && !trim_ws(root["response"].asString()).empty()) {
+        return root["response"].asString();
+    }
+
+    if (root["message"].isObject() &&
+        root["message"]["content"].isString() &&
+        !trim_ws(root["message"]["content"].asString()).empty()) {
+        return root["message"]["content"].asString();
+    }
+
+    if (logger) {
+        logger->error("Remote LLM response contained no usable text content. Raw envelope: {}", payload);
+    }
+    throw std::runtime_error(
+        "Response Error: The model server returned a successful response but no usable text content.");
 }
 }
 
@@ -417,6 +470,7 @@ std::string LLMClient::make_generic_payload(const std::string& system_prompt,
     if (max_tokens > 0) {
         payload << ",\"max_tokens\": " << max_tokens;
     }
+    payload << ",\"temperature\": 0.1";
     payload << "}";
     return payload.str();
 }
@@ -425,7 +479,9 @@ std::string LLMClient::complete_prompt(const std::string& prompt,
                                        int max_tokens)
 {
     static const std::string kSystem =
-        "You are a precise assistant that returns well-formed JSON responses.";
+        "You are a precise filesystem organization assistant. "
+        "Return only one valid JSON object. Do not include Markdown fences, reasoning, commentary, or text outside the JSON. "
+        "The first non-whitespace character must be { and the last must be }.";
     if (prompt_logging_enabled) {
         std::cout << "\n[DEV][PROMPT] Completion request\n"
                   << prompt << "\n";
