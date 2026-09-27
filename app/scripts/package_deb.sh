@@ -285,6 +285,7 @@ PACKAGE_DEPENDS=(
     "libqt6core6 (>= 6.2)"
     "libqt6dbus6 (>= 6.2)"
     "qt6-wayland"
+    "qt6-translations-l10n"
     "$CURL_DEP"
     "$JSONCPP_DEP"
     "libsqlite3-0"
