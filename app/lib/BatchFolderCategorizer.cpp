@@ -203,7 +203,7 @@ std::string BatchFolderCategorizer::build_inventory_json(const std::vector<FileE
         item["extension"] = entry.type == FileType::File
             ? Utils::path_to_utf8(path.extension())
             : std::string();
-        root.append(std::move(item));
+        root.append(item);
     }
 
     Json::StreamWriterBuilder builder;
