@@ -3252,5 +3252,13 @@ Retry error: %2</source>
 首次错误：%1
 重试错误：%2</translation>
     </message>
+    <message>
+        <source>The AI request failed before a complete response was received. Items: %1, prompt size: %2 KiB.
+
+%3</source>
+        <translation>AI 请求在收到完整响应之前失败。项目数：%1，提示词大小：%2 KiB。
+
+%3</translation>
+    </message>
 </context>
 </TS>
