@@ -536,15 +536,31 @@ void MainAppUiBuilder::build_central_panel(MainApp& app) {
     control_block->addSpacing(4);
     control_block->addLayout(whitelist_row);
 
-    QObject::connect(app.ai_model_button, &QPushButton::clicked, &app, &MainApp::show_llm_selection_dialog);
+    QObject::connect(app.ai_model_button, &QPushButton::clicked, &app, [&app]() {
+        if (app.organization_mode_rules_radio && app.organization_mode_rules_radio->isChecked()) {
+            app.show_rule_editor();
+        } else {
+            app.show_llm_selection_dialog();
+        }
+    });
     QObject::connect(app.organization_mode_rules_radio, &QRadioButton::toggled, &app, [&app](bool rules_mode) {
         const bool ai_mode = !rules_mode;
-        if (app.ai_model_button) app.ai_model_button->setEnabled(ai_mode);
-        if (app.categorization_style_heading) app.categorization_style_heading->setEnabled(ai_mode);
-        if (app.categorization_style_refined_radio) app.categorization_style_refined_radio->setEnabled(ai_mode);
-        if (app.categorization_style_consistent_radio) app.categorization_style_consistent_radio->setEnabled(ai_mode);
-        if (app.use_whitelist_checkbox) app.use_whitelist_checkbox->setEnabled(ai_mode);
+        if (app.ai_model_button) {
+            app.ai_model_button->setEnabled(true);
+            app.ai_model_button->setText(QCoreApplication::translate(
+                "UiTranslator", rules_mode ? "Edit rules…" : "AI model…"));
+            app.ai_model_button->setToolTip(QCoreApplication::translate(
+                "UiTranslator",
+                rules_mode
+                    ? "Open the deterministic rule editor used by Rule mode."
+                    : "Choose or configure the AI model used for folder organization."));
+        }
+        if (app.categorization_style_heading) app.categorization_style_heading->setVisible(ai_mode);
+        if (app.categorization_style_refined_radio) app.categorization_style_refined_radio->setVisible(ai_mode);
+        if (app.categorization_style_consistent_radio) app.categorization_style_consistent_radio->setVisible(ai_mode);
+        if (app.use_whitelist_checkbox) app.use_whitelist_checkbox->setVisible(ai_mode);
         if (app.whitelist_selector) {
+            app.whitelist_selector->setVisible(ai_mode);
             app.whitelist_selector->setEnabled(ai_mode && app.use_whitelist_checkbox && app.use_whitelist_checkbox->isChecked());
         }
     });
