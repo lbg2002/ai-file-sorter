@@ -414,6 +414,9 @@ private:
     void set_categorization_style(bool use_consistency);
     bool ensure_folder_categorization_style(const std::string& folder_path);
     void show_whitelist_manager();
+    void show_prompt_editor();
+    void show_rule_editor();
+    void run_rule_mode();
     void apply_whitelist_to_selector();
     /**
      * @brief Returns the menu action corresponding to a category language.
@@ -473,6 +476,9 @@ private:
     QPointer<QLabel> backend_status_label;
     QPointer<QLabel> path_label;
     QPointer<QCheckBox> use_subcategories_checkbox;
+    QPointer<QLabel> organization_mode_heading;
+    QPointer<QRadioButton> organization_mode_ai_radio;
+    QPointer<QRadioButton> organization_mode_rules_radio;
     QPointer<QLabel> categorization_style_heading;
     QPointer<QRadioButton> categorization_style_refined_radio;
     QPointer<QRadioButton> categorization_style_consistent_radio;
@@ -535,6 +541,8 @@ private:
     QAction* review_history_action{nullptr};
     QAction* toggle_explorer_action{nullptr};
     QAction* toggle_llm_action{nullptr};
+    QAction* edit_prompt_action{nullptr};
+    QAction* manage_rules_action{nullptr};
     QAction* manage_storage_plugins_action{nullptr};
     QAction* windows_explorer_extension_install_action{nullptr};
     QAction* windows_explorer_extension_settings_action{nullptr};
