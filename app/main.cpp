@@ -1,5 +1,7 @@
 #include "AppInfo.hpp"
 #include "AppTheme.hpp"
+#include "Language.hpp"
+#include "CategoryLanguage.hpp"
 #include "AppTestRunner.hpp"
 #include "EmbeddedEnv.hpp"
 #include "GgmlRuntimePaths.hpp"
