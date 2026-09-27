@@ -2,11 +2,14 @@
 
 A safety-focused community fork of [hyperfield/ai-file-sorter](https://github.com/hyperfield/ai-file-sorter).
 
-FileSort Guard keeps the upstream AI categorization, document/image analysis, local and remote LLM support, review workflow, undo history, and cross-platform Qt application, while adding two deliberately simple workflows:
+FileSort Guard keeps the upstream local/remote LLM clients, review workflow, undo history, and cross-platform Qt application, while changing the interactive AI organization flow to be folder-oriented:
 
-- **Editable AI prompts** — view, edit, preview, enable/disable, and restore the categorization system prompt.
+- **One-request folder AI** — list the selected folder once and ask the model to categorize the whole inventory in one structured JSON response.
+- **Optional recursion** — the existing subdirectory option controls whether the batch inventory includes nested items.
+- **Custom AI models** — use OpenAI, Gemini, built-in local models, custom GGUF models, or any configured OpenAI-compatible endpoint such as vLLM/Ollama/LM Studio.
+- **Editable batch prompt** — view, edit, preview, enable/disable, and restore the prompt used for the single folder request.
 - **Rule mode** — organize files deterministically without calling an LLM.
-- **Safety validation before apply** — compare the final categorization plan with the scanned filesystem snapshot and highlight anomalies before any move is allowed.
+- **Safety validation before apply** — compare the final categorization plan with the original filesystem snapshot and highlight anomalies before any move is allowed.
 
 > This repository is an independent modified fork. It is not an official build of AI File Sorter and is not affiliated with or endorsed by the upstream project.
 
@@ -37,26 +40,24 @@ Supported variables:
 
 | Variable | Meaning |
 | --- | --- |
-| `{{filename}}` | Current file or directory name |
-| `{{path}}` | Path/context sent to categorization |
-| `{{item_type}}` | `file` or `directory` |
-| `{{context}}` | Whitelist / consistency context |
-| `{{output_format}}` | Required category response format |
+| `{{folder_path}}` | Selected folder |
+| `{{inventory_json}}` | Complete scanned inventory with stable numeric ids |
+| `{{recursive}}` | Whether recursive scanning is enabled |
+| `{{item_count}}` | Number of scanned items |
+| `{{category_language}}` | Requested category language |
+| `{{context}}` | Whitelist and categorization-style constraints |
+| `{{output_schema}}` | Required structured JSON response schema |
 
-When the override is disabled, the original upstream prompts are used.
-
-The override is applied to:
-
-- OpenAI / OpenAI-compatible categorization;
-- Gemini categorization;
-- local LLM categorization.
+When the override is disabled, FileSort Guard uses its built-in safe folder-batch prompt.
 
 ### 2. Separate AI mode and Rule mode
 
 The main screen now exposes two independent organization modes:
 
-- **AI mode** — reuses the existing upstream AI pipeline.
+- **AI mode (one request per folder)** — scans the selected folder, sends the whole inventory once to the selected model, parses one JSON response, then opens the normal editable review screen.
 - **Rule mode** — does not call an LLM.
+
+The **AI model…** button opens the existing model selector. It supports remote OpenAI/Gemini, custom OpenAI-compatible APIs with a user-defined base URL/model/API key, custom local GGUF models, and the built-in local models.
 
 This fork intentionally does **not** add embeddings, vector databases, hybrid routing, or automatic AI fallback.
 
@@ -92,16 +93,17 @@ Files that do not match a rule are left untouched.
 
 ### 3. Safety validation and visual anomaly preview
 
-The upstream AI pipeline categorizes items individually and normalizes the result into structured `CategorizedFile` records. FileSort Guard validates that final structured plan against a fresh filesystem snapshot before showing the review dialog.
+AI mode now returns the whole selected folder as one structured response keyed by numeric item ids. The model never supplies authoritative source paths or destination paths; those are reconstructed by the application from the original scan. FileSort Guard validates the parsed plan against the pre-analysis filesystem snapshot before showing the review dialog, and runs another validation over the user's final selected/edited rows immediately before apply.
 
-The validator detects four conditions:
+The validator detects five conditions:
 
 | Status | Meaning | Review behavior |
 | --- | --- | --- |
 | **Duplicate source** | The same source item appears more than once in the proposed plan | Highlighted amber; processing blocked |
 | **Missing from result** | A scanned item is absent from the proposed plan | Highlighted red; item is kept in place |
 | **Unknown source** | A proposed source was not present in the scan snapshot | Highlighted purple; processing blocked |
-| **Destination conflict** | Different source items resolve to the same destination path | Highlighted rose; processing blocked |
+| **Destination conflict** | Different source items resolve to the same destination path | Highlighted rose; deselected until fixed |
+| **Unsafe target** | A category/subcategory contains an empty or path-like component | Highlighted orange; deselected until fixed |
 
 The status is shown as text as well as background color, so the review does not rely on color alone.
 
@@ -113,11 +115,12 @@ This fork keeps the existing preview/confirmation flow and adds these constraint
 
 1. AI output is never the filesystem authority.
 2. A missing AI result does not delete a file.
-3. Unknown/hallucinated source paths are ignored and block processing.
-4. Duplicate source operations block processing.
-5. Multiple files targeting the same destination block processing.
-6. Rule mode only moves matched items; unmatched items remain untouched.
-7. Existing upstream Undo support remains available after a successful operation.
+3. The model identifies inputs only by numeric ids; unknown/hallucinated ids are surfaced and cannot silently become filesystem paths.
+4. Duplicate source operations are rejected by the final safety gate.
+5. Multiple files targeting the same destination are rejected unless the user edits or deselects the conflict.
+6. Path-like/unsafe category targets are rejected.
+7. Rule mode only moves matched items; unmatched items remain untouched.
+8. Existing upstream Undo support remains available after a successful operation.
 
 ## Architecture of the fork additions
 
@@ -132,16 +135,20 @@ This fork keeps the existing preview/confirmation flow and adds these constraint
               v                               v
           AI mode                         Rule mode
               |                               |
-       upstream AI pipeline               RuleEngine
+     one inventory / one LLM call          RuleEngine
               |                               |
-       CategorizedFile[]                 CategorizedFile[]
+       structured JSON response          CategorizedFile[]
+              |
+        BatchFolderCategorizer
+              |
+       CategorizedFile[]
               |
               v
      ResultIntegrityValidator
               |
       +-------+--------+---------+----------+
       |                |         |          |
-   duplicate         missing   unknown   target conflict
+   duplicate         missing   unknown   target conflict / unsafe target
       |                |         |          |
       +----------------+---------+----------+
                        |
@@ -158,6 +165,7 @@ This fork keeps the existing preview/confirmation flow and adds these constraint
 
 ```text
 app/include/
+  BatchFolderCategorizer.hpp
   PromptTemplateStore.hpp
   PromptEditorDialog.hpp
   RuleEngine.hpp
@@ -165,6 +173,7 @@ app/include/
   ResultIntegrityValidator.hpp
 
 app/lib/
+  BatchFolderCategorizer.cpp
   PromptTemplateStore.cpp
   PromptEditorDialog.cpp
   RuleEngine.cpp
@@ -172,11 +181,12 @@ app/lib/
   ResultIntegrityValidator.cpp
 
 tests/unit/
+  test_batch_folder_categorizer.cpp
   test_rule_engine.cpp
   test_result_integrity_validator.cpp
 ```
 
-The existing upstream AI implementation is intentionally reused rather than rewritten.
+The upstream model clients are reused. The interactive GUI orchestration is changed from per-item LLM calls to a folder-batch request, while legacy/headless per-item code is retained for compatibility.
 
 ## Build from source
 
