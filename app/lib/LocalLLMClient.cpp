@@ -2263,8 +2263,19 @@ std::string LocalLLMClient::generate_response(const std::string& prompt,
             int n_prompt = 0;
             std::string working_prompt = prompt;
             std::string final_prompt;
+            const int resolved_context_tokens = static_cast<int>(resolved_params.n_ctx);
+            const int max_generation_for_context =
+                std::max(64, resolved_context_tokens * 45 / 100);
+            const int effective_n_predict =
+                std::clamp(n_predict, 1, max_generation_for_context);
+            if (effective_n_predict < n_predict && logger) {
+                logger->info("Capped generation from {} to {} tokens to preserve prompt space in a {}-token context",
+                             n_predict,
+                             effective_n_predict,
+                             resolved_context_tokens);
+            }
             const int context_budget =
-                LocalLLMPromptBuilder::prompt_token_budget(static_cast<int>(resolved_params.n_ctx), n_predict);
+                LocalLLMPromptBuilder::prompt_token_budget(resolved_context_tokens, effective_n_predict);
             for (int shrink_attempt = 0;; ++shrink_attempt) {
                 if (!format_prompt(model, system_prompt, working_prompt, final_prompt)) {
                     if (logger) {
@@ -2308,7 +2319,7 @@ std::string LocalLLMClient::generate_response(const std::string& prompt,
                                                      smpl,
                                                      prompt_tokens,
                                                      n_prompt,
-                                                     n_predict,
+                                                     effective_n_predict,
                                                      logger,
                                                      vocab);
 
@@ -2409,6 +2420,20 @@ std::string LocalLLMClient::categorize_file(const std::string& file_name,
 std::string LocalLLMClient::complete_prompt(const std::string& prompt,
                                             int max_tokens)
 {
+    const bool folder_batch =
+        prompt.find("Complete folder inventory") != std::string::npos ||
+        prompt.find("selected filesystem folder in a single batch") != std::string::npos;
+    if (folder_batch && static_cast<int>(ctx_params.n_ctx) < kMaximumRuntimeContextTokens) {
+        // Folder batches need substantially more room than the legacy one-file
+        // classifier. This is still bounded by the runtime's existing safety cap.
+        ctx_params.n_ctx = kMaximumRuntimeContextTokens;
+        ctx_params.n_batch = std::min<int>(2048, kMaximumRuntimeContextTokens);
+        if (auto logger = Logger::get_logger("core_logger")) {
+            logger->info("Expanded local LLM context to {} tokens for folder-batch categorization",
+                         kMaximumRuntimeContextTokens);
+        }
+    }
+
     const int capped = max_tokens > 0 ? max_tokens : kDefaultCompletionTokens;
     if (prompt_logging_enabled) {
         std::cout << "\n[DEV][PROMPT] Completion request\n"
