@@ -442,6 +442,11 @@ void MainAppUiBuilder::build_central_panel(MainApp& app) {
     audio_video_row->addStretch(1);
     main_layout->addLayout(audio_video_row);
 
+    app.organization_mode_heading = new QLabel(tr("Organization mode"), central);
+    app.organization_mode_ai_radio = new QRadioButton(tr("AI mode"), central);
+    app.organization_mode_rules_radio = new QRadioButton(tr("Rule mode"), central);
+    app.organization_mode_ai_radio->setChecked(true);
+
     app.categorization_style_heading = new QLabel(central);
     app.categorization_style_refined_radio = new QRadioButton(central);
     app.categorization_style_consistent_radio = new QRadioButton(central);
@@ -467,6 +472,13 @@ void MainAppUiBuilder::build_central_panel(MainApp& app) {
     app.analyze_button->setMinimumWidth(160);
     auto* analyze_layout = new QHBoxLayout();
     auto* categorization_layout = new QVBoxLayout();
+    auto* organization_mode_row = new QHBoxLayout();
+    organization_mode_row->addWidget(app.organization_mode_ai_radio);
+    organization_mode_row->addWidget(app.organization_mode_rules_radio);
+    organization_mode_row->addStretch();
+    categorization_layout->addWidget(app.organization_mode_heading);
+    categorization_layout->addLayout(organization_mode_row);
+    categorization_layout->addSpacing(4);
     auto* toggle_row = new QHBoxLayout();
     toggle_row->addWidget(app.categorization_style_refined_radio);
     toggle_row->addWidget(app.categorization_style_consistent_radio);
@@ -483,6 +495,17 @@ void MainAppUiBuilder::build_central_panel(MainApp& app) {
     control_block->addLayout(categorization_layout);
     control_block->addSpacing(4);
     control_block->addLayout(whitelist_row);
+
+    QObject::connect(app.organization_mode_rules_radio, &QRadioButton::toggled, &app, [&app](bool rules_mode) {
+        const bool ai_mode = !rules_mode;
+        if (app.categorization_style_heading) app.categorization_style_heading->setEnabled(ai_mode);
+        if (app.categorization_style_refined_radio) app.categorization_style_refined_radio->setEnabled(ai_mode);
+        if (app.categorization_style_consistent_radio) app.categorization_style_consistent_radio->setEnabled(ai_mode);
+        if (app.use_whitelist_checkbox) app.use_whitelist_checkbox->setEnabled(ai_mode);
+        if (app.whitelist_selector) {
+            app.whitelist_selector->setEnabled(ai_mode && app.use_whitelist_checkbox && app.use_whitelist_checkbox->isChecked());
+        }
+    });
 
     analyze_layout->addLayout(control_block);
     analyze_layout->addSpacing(12);
@@ -741,6 +764,12 @@ void MainAppUiBuilder::build_settings_menu(MainApp& app) {
     app.settings_menu = app.menuBar()->addMenu(QString());
     app.toggle_llm_action = app.settings_menu->addAction(llm_menu_icon(app), QString());
     QObject::connect(app.toggle_llm_action, &QAction::triggered, &app, &MainApp::show_llm_selection_dialog);
+
+    app.edit_prompt_action = app.settings_menu->addAction(tr("Edit AI Prompt…"));
+    QObject::connect(app.edit_prompt_action, &QAction::triggered, &app, &MainApp::show_prompt_editor);
+
+    app.manage_rules_action = app.settings_menu->addAction(tr("Manage File Rules…"));
+    QObject::connect(app.manage_rules_action, &QAction::triggered, &app, &MainApp::show_rule_editor);
 
     app.manage_whitelists_action = app.settings_menu->addAction(whitelist_menu_icon(app), QString());
     QObject::connect(app.manage_whitelists_action, &QAction::triggered, &app, &MainApp::show_whitelist_manager);
