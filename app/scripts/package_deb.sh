@@ -95,6 +95,9 @@ while [[ $# -gt 0 ]]; do
 done
 
 VERSION="${VERSION_ARG:-$(VERSION_FROM_HEADER "$APP_DIR/include/app_version.hpp")}"
+if [[ -n "${AIFS_PACKAGE_REVISION:-}" ]]; then
+    VERSION="${VERSION}+${AIFS_PACKAGE_REVISION}"
+fi
 
 if [[ "$AUTO_INCLUDE_GPU" == "0" && ( "$REQUIRE_CUDA" == "1" || "$REQUIRE_VULKAN" == "1" ) ]]; then
     echo "Cannot combine --cpu-only with GPU include flags." >&2
