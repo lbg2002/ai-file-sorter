@@ -131,3 +131,20 @@ TEST_CASE("BatchFolderCategorizer rejects path-like rename suggestions")
     REQUIRE(parsed.files.size() == 1);
     REQUIRE(parsed.files.front().suggested_name.empty());
 }
+
+
+TEST_CASE("Batch prompt permits safe new category folders without a whitelist")
+{
+    TempDir temp;
+    const auto root = temp.path();
+    std::vector<FileEntry> entries{
+        {(root / "draft.md").string(), "draft.md", FileType::File},
+    };
+
+    BatchFolderCategorizationOptions options;
+    options.folder_path = root.string();
+
+    const std::string prompt = BatchFolderCategorizer::build_prompt(entries, options);
+    REQUIRE(prompt.find("may propose a new category or subcategory") != std::string::npos);
+    REQUIRE(prompt.find("only after the user reviews and approves") != std::string::npos);
+}
