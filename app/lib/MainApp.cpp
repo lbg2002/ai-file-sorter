@@ -1555,7 +1555,18 @@ void MainApp::on_analyze_clicked()
 
     try {
         last_scan_root_ = folder_path;
-        last_scan_snapshot_ = results_coordinator.list_directory(folder_path, effective_scan_options());
+        const FileScanOptions selected_options = effective_scan_options();
+        last_scan_snapshot_ = results_coordinator.list_directory(folder_path, selected_options);
+
+        FileScanOptions folder_context_options = FileScanOptions::Directories;
+        if (settings.get_include_subdirectories()) {
+            folder_context_options = folder_context_options | FileScanOptions::Recursive;
+        }
+        if (has_flag(selected_options, FileScanOptions::HiddenFiles)) {
+            folder_context_options = folder_context_options | FileScanOptions::HiddenFiles;
+        }
+        last_existing_directory_snapshot_ =
+            results_coordinator.list_directory(folder_path, folder_context_options);
     } catch (const std::exception& ex) {
         show_error_dialog(fmt::format("Could not capture the filesystem snapshot: {}", ex.what()));
         return;
@@ -2981,6 +2992,20 @@ void MainApp::perform_batch_ai_analysis()
         options.allowed_categories = settings.get_allowed_categories();
         options.allowed_subcategories_by_category =
             settings.get_allowed_subcategories_by_category();
+    }
+
+    const std::filesystem::path batch_root = Utils::utf8_to_path(last_scan_root_).lexically_normal();
+    for (const auto& directory : last_existing_directory_snapshot_) {
+        const std::filesystem::path full =
+            Utils::utf8_to_path(directory.full_path).lexically_normal();
+        const std::filesystem::path relative = full.lexically_relative(batch_root);
+        const std::string text = relative.empty()
+            ? directory.file_name
+            : Utils::path_to_utf8(relative);
+        if (!text.empty() && text != "." && text != ".." &&
+            text.rfind("../", 0) != 0 && text.rfind("..\\", 0) != 0) {
+            options.existing_directories.push_back(text);
+        }
     }
 
     auto llm = make_llm_client();
