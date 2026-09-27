@@ -279,6 +279,43 @@ HttpResponseInfo perform_request(CurlRequest& request,
     throw std::runtime_error("Network Error: remote request failed.");
 }
 
+std::string text_from_json_value(const Json::Value& value)
+{
+    if (value.isString()) {
+        return trim_ws(value.asString());
+    }
+    if (value.isArray()) {
+        std::string combined;
+        for (const auto& part : value) {
+            if (part.isString()) {
+                combined += part.asString();
+                continue;
+            }
+            if (!part.isObject()) {
+                continue;
+            }
+            for (const char* key : {"text", "content", "output_text"}) {
+                if (part[key].isString()) {
+                    combined += part[key].asString();
+                    break;
+                }
+            }
+        }
+        return trim_ws(combined);
+    }
+    if (value.isObject()) {
+        for (const char* key : {"text", "content", "output_text"}) {
+            if (value[key].isString()) {
+                const std::string text = trim_ws(value[key].asString());
+                if (!text.empty()) {
+                    return text;
+                }
+            }
+        }
+    }
+    return {};
+}
+
 std::string parse_category_response(const std::string& payload,
                                     const std::shared_ptr<spdlog::logger>& logger)
 {
@@ -294,60 +331,91 @@ std::string parse_category_response(const std::string& payload,
         throw std::runtime_error("Response Error: Failed to parse JSON response. " + errors);
     }
 
+    std::string finish_reason;
     const Json::Value& choices = root["choices"];
     if (choices.isArray() && !choices.empty()) {
         const Json::Value& choice = choices[0];
+        if (choice["finish_reason"].isString()) {
+            finish_reason = choice["finish_reason"].asString();
+        }
+
         const Json::Value& message = choice["message"];
-
         if (message.isObject()) {
-            const Json::Value& content = message["content"];
-            if (content.isString() && !trim_ws(content.asString()).empty()) {
-                return content.asString();
+            const std::string content = text_from_json_value(message["content"]);
+            if (!content.empty()) {
+                return content;
             }
 
-            if (content.isArray()) {
-                std::string combined;
-                for (const auto& part : content) {
-                    if (part.isString()) {
-                        combined += part.asString();
-                    } else if (part.isObject() && part["text"].isString()) {
-                        combined += part["text"].asString();
+            for (const char* key : {"reasoning_content", "reasoning", "analysis", "thinking"}) {
+                const std::string reasoning = text_from_json_value(message[key]);
+                if (!reasoning.empty()) {
+                    if (logger) {
+                        logger->warn(
+                            "Remote LLM returned empty final content; using '{}' fallback.",
+                            key);
                     }
+                    return reasoning;
                 }
-                if (!trim_ws(combined).empty()) {
-                    return combined;
-                }
-            }
-
-            const Json::Value& reasoning = message["reasoning_content"];
-            if (reasoning.isString() && !trim_ws(reasoning.asString()).empty()) {
-                if (logger) {
-                    logger->warn("Remote LLM returned empty content; using reasoning_content fallback.");
-                }
-                return reasoning.asString();
             }
         }
 
-        if (choice["text"].isString() && !trim_ws(choice["text"].asString()).empty()) {
-            return choice["text"].asString();
+        for (const char* key : {"text", "content", "output_text"}) {
+            const std::string text = text_from_json_value(choice[key]);
+            if (!text.empty()) {
+                return text;
+            }
         }
     }
 
-    if (root["response"].isString() && !trim_ws(root["response"].asString()).empty()) {
-        return root["response"].asString();
+    for (const char* key : {"response", "output_text", "text", "content"}) {
+        const std::string text = text_from_json_value(root[key]);
+        if (!text.empty()) {
+            return text;
+        }
     }
 
-    if (root["message"].isObject() &&
-        root["message"]["content"].isString() &&
-        !trim_ws(root["message"]["content"].asString()).empty()) {
-        return root["message"]["content"].asString();
+    if (root["message"].isObject()) {
+        const std::string text = text_from_json_value(root["message"]["content"]);
+        if (!text.empty()) {
+            return text;
+        }
+    }
+
+    if (root["output"].isArray()) {
+        for (const auto& output_item : root["output"]) {
+            if (!output_item.isObject()) {
+                continue;
+            }
+            const std::string direct = text_from_json_value(output_item);
+            if (!direct.empty()) {
+                return direct;
+            }
+            const std::string nested = text_from_json_value(output_item["content"]);
+            if (!nested.empty()) {
+                return nested;
+            }
+        }
     }
 
     if (logger) {
         logger->error("Remote LLM response contained no usable text content. Raw envelope: {}", payload);
     }
+
+    if (finish_reason == "length" || finish_reason == "max_tokens") {
+        throw std::runtime_error(
+            "Response Error: The model used the completion budget before producing final text "
+            "(finish_reason=" + finish_reason +
+            "). This commonly happens with reasoning/thinking models. "
+            "Use a larger output budget or disable thinking for this request.");
+    }
+
+    std::string suffix;
+    if (!finish_reason.empty()) {
+        suffix = " finish_reason=" + finish_reason + ".";
+    }
     throw std::runtime_error(
-        "Response Error: The model server returned a successful response but no usable text content.");
+        "Response Error: The model server returned a successful response but no usable text content." + suffix +
+        " The endpoint may be using a non-standard OpenAI-compatible response schema.");
 }
 }
 
