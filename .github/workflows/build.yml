@@ -1,4 +1,4 @@
-name: Build
+name: Build Ubuntu amd64
 
 on:
   push:
@@ -6,19 +6,6 @@ on:
   pull_request:
     branches: [ main ]
   workflow_dispatch:
-    inputs:
-      linux_target:
-        description: Linux target to build
-        required: true
-        default: all
-        type: choice
-        options:
-          - all
-          - ubuntu-lts
-          - debian-stable
-          - fedora-latest
-          - rocky-latest
-          - arch-latest
 
 permissions:
   contents: read
@@ -28,110 +15,45 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-linux:
-    name: Linux (${{ matrix.name }})
-    runs-on: ubuntu-latest
+  build-ubuntu-amd64:
+    name: Ubuntu 24.04 (amd64)
+    runs-on: ubuntu-24.04
     timeout-minutes: 360
     container:
-      image: ${{ matrix.image }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: ubuntu-lts
-            image: ubuntu:latest
-            artifact_kind: deb
-            install: |
-              export DEBIAN_FRONTEND=noninteractive
-              apt-get update
-              apt-get install -y --no-install-recommends \
-                build-essential ca-certificates cmake git make ninja-build patchelf pkg-config python3 \
-                qt6-base-dev qt6-base-dev-tools qt6-l10n-tools qt6-tools-dev-tools \
-                libcurl4-gnutls-dev libjsoncpp-dev libsqlite3-dev libssl-dev \
-                libfmt-dev libspdlog-dev libmediainfo-dev libopenblas-dev zlib1g-dev \
-                gettext glslc spirv-headers g++-13 nvidia-cuda-toolkit
+      image: ubuntu:24.04
 
-          - name: debian-stable
-            image: debian:stable
-            artifact_kind: deb
-            install: |
-              export DEBIAN_FRONTEND=noninteractive
-              sed -i 's/Components: main/Components: main contrib non-free non-free-firmware/' /etc/apt/sources.list.d/debian.sources
-              apt-get update
-              apt-get install -y --no-install-recommends \
-                build-essential ca-certificates cmake git make ninja-build patchelf pkg-config python3 \
-                qt6-base-dev qt6-base-dev-tools qt6-l10n-tools qt6-tools-dev-tools \
-                libcurl4-gnutls-dev libjsoncpp-dev libsqlite3-dev libssl-dev \
-                libfmt-dev libspdlog-dev libmediainfo-dev libopenblas-dev zlib1g-dev \
-                gettext glslc spirv-headers g++-13 g++-14 nvidia-cuda-toolkit
-
-          - name: fedora-latest
-            image: fedora:latest
-            artifact_kind: rpm
-            install: |
-              dnf install -y ca-certificates dnf-plugins-core
-              distro="fedora$(rpm -E %fedora)"
-              dnf config-manager addrepo \
-                --from-repofile="https://developer.download.nvidia.com/compute/cuda/repos/${distro}/x86_64/cuda-${distro}.repo"
-              dnf clean expire-cache
-              dnf install -y \
-                cmake gcc-c++ gcc15-c++ git make ninja-build patchelf pkgconf-pkg-config python3 rpm-build \
-                qt6-qtbase-devel qt6-qttools-devel \
-                libcurl-devel jsoncpp-devel sqlite-devel openssl-devel \
-                fmt-devel spdlog-devel libmediainfo-devel openblas-devel zlib-devel \
-                gettext-devel glslc spirv-headers-devel cuda-toolkit
-
-          - name: rocky-latest
-            image: quay.io/rockylinux/rockylinux:10
-            artifact_kind: rpm
-            install: |
-              dnf install -y ca-certificates dnf-plugins-core epel-release
-              dnf config-manager --set-enabled crb
-              distro="rhel$(rpm -E %rhel)"
-              dnf config-manager \
-                --add-repo="https://developer.download.nvidia.com/compute/cuda/repos/${distro}/x86_64/cuda-${distro}.repo"
-              dnf clean expire-cache
-              dnf install --nobest -y \
-                cmake gcc-c++ git make ninja-build patchelf pkgconf-pkg-config python3 rpm-build \
-                qt6-qtbase-devel qt6-qttools-devel \
-                libcurl-devel jsoncpp-devel sqlite-devel openssl-devel \
-                fmt-devel spdlog-devel libmediainfo-devel openblas-devel zlib-devel \
-                gettext-devel glslc spirv-headers-devel cuda-toolkit
-
-          - name: arch-latest
-            image: archlinux:latest
-            artifact_kind: tar
-            install: |
-              pacman -Sy --noconfirm archlinux-keyring
-              pacman -Syu --noconfirm
-              pacman -S --noconfirm --needed \
-                base-devel ca-certificates cmake git ninja patchelf pkgconf python zstd \
-                qt6-base qt6-tools curl jsoncpp sqlite openssl \
-                fmt spdlog libmediainfo openblas zlib gettext \
-                shaderc spirv-headers vulkan-headers vulkan-icd-loader cuda gcc15
     defaults:
       run:
         shell: bash
+
     env:
       AI_FILE_SORTER_BUILD_JOBS: 2
       AI_FILE_SORTER_LINUX_RUNTIME_JOBS: 2
       CUDAARCHS: "75;80;86;89;90"
       QT_QPA_PLATFORM: offscreen
+
     steps:
       - name: Install build dependencies
-        if: ${{ (github.event_name != 'pull_request' || matrix.name == 'ubuntu-lts') && (github.event_name != 'workflow_dispatch' || inputs.linux_target == 'all' || inputs.linux_target == matrix.name) }}
-        run: ${{ matrix.install }}
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            build-essential ca-certificates cmake git make ninja-build patchelf pkg-config python3 \
+            qt6-base-dev qt6-base-dev-tools qt6-l10n-tools qt6-tools-dev-tools \
+            libcurl4-gnutls-dev libjsoncpp-dev libsqlite3-dev libssl-dev \
+            libfmt-dev libspdlog-dev libmediainfo-dev libopenblas-dev zlib1g-dev \
+            gettext glslc spirv-headers g++-13 nvidia-cuda-toolkit
 
       - name: Check out repository
-        if: ${{ (github.event_name != 'pull_request' || matrix.name == 'ubuntu-lts') && (github.event_name != 'workflow_dispatch' || inputs.linux_target == 'all' || inputs.linux_target == matrix.name) }}
         uses: actions/checkout@v7
         with:
           submodules: recursive
 
       - name: Show toolchain
-        if: ${{ (github.event_name != 'pull_request' || matrix.name == 'ubuntu-lts') && (github.event_name != 'workflow_dispatch' || inputs.linux_target == 'all' || inputs.linux_target == matrix.name) }}
         run: |
           cat /etc/os-release
+          uname -m
+          test "$(uname -m)" = "x86_64"
           cmake --version
           c++ --version
           export PATH="/usr/local/cuda-13.4/bin:/usr/local/cuda-13.3/bin:/usr/local/cuda-13.2/bin:/usr/local/cuda-13.1/bin:/usr/local/cuda/bin:/opt/cuda/bin:$PATH"
@@ -144,54 +66,31 @@ jobs:
           fi
 
       - name: Build llama runtime variants
-        if: ${{ (github.event_name != 'pull_request' || matrix.name == 'ubuntu-lts') && (github.event_name != 'workflow_dispatch' || inputs.linux_target == 'all' || inputs.linux_target == matrix.name) }}
         run: |
           export PATH="/usr/local/cuda-13.4/bin:/usr/local/cuda-13.3/bin:/usr/local/cuda-13.2/bin:/usr/local/cuda-13.1/bin:/usr/local/cuda/bin:/opt/cuda/bin:$PATH"
           ./app/scripts/build_llama_linux.sh cuda=off vulkan=on blas=on
           if [[ "${{ github.event_name }}" != "pull_request" ]]; then
             ./app/scripts/build_llama_linux.sh cuda=on vulkan=off blas=on cuda-arch="$CUDAARCHS"
           else
-            echo "Pull request quick build: skipping CUDA runtime compilation; main/release builds still include CUDA."
+            echo "Pull request quick build: skipping CUDA runtime compilation."
           fi
 
       - name: Build app
-        if: ${{ (github.event_name != 'pull_request' || matrix.name == 'ubuntu-lts') && (github.event_name != 'workflow_dispatch' || inputs.linux_target == 'all' || inputs.linux_target == matrix.name) }}
         run: make -C app -j"$AI_FILE_SORTER_BUILD_JOBS"
 
-      - name: Package artifact
-        if: ${{ (github.event_name != 'pull_request' || matrix.name == 'ubuntu-lts') && (github.event_name != 'workflow_dispatch' || inputs.linux_target == 'all' || inputs.linux_target == matrix.name) }}
+      - name: Package Ubuntu amd64 artifact
         run: |
           mkdir -p dist/ci-artifacts
-          case "${{ matrix.artifact_kind }}" in
-            deb)
-              if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-                # PR builds intentionally skip CUDA runtime compilation above,
-                # so only require the variants that were actually staged.
-                ./app/scripts/package_deb.sh --include-vulkan
-              else
-                ./app/scripts/package_deb.sh --include-all
-              fi
-              cp dist/aifilesorter_deb/*.deb dist/ci-artifacts/
-              ;;
-            rpm)
-              ./app/scripts/create_rpm.sh --include-all
-              cp dist/aifilesorter_rpm/final/*.rpm dist/ci-artifacts/
-              ;;
-            tar)
-              tar --zstd -cf "dist/ci-artifacts/aifilesorter-${{ matrix.name }}.tar.zst" \
-                app/bin \
-                app/lib/precompiled \
-                app/lib/ggml \
-                app/resources/certs/cacert.pem \
-                LICENSE \
-                README.md
-              ;;
-          esac
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            ./app/scripts/package_deb.sh --include-vulkan
+          else
+            ./app/scripts/package_deb.sh --include-all
+          fi
+          cp dist/aifilesorter_deb/*.deb dist/ci-artifacts/
 
       - name: Upload artifact
-        if: ${{ (github.event_name != 'pull_request' || matrix.name == 'ubuntu-lts') && (github.event_name != 'workflow_dispatch' || inputs.linux_target == 'all' || inputs.linux_target == matrix.name) }}
         uses: actions/upload-artifact@v7
         with:
-          name: aifilesorter-linux-${{ matrix.name }}
-          path: dist/ci-artifacts/*
+          name: filesort-guard-ubuntu-24.04-amd64
+          path: dist/ci-artifacts/*.deb
           if-no-files-found: error
