@@ -21,6 +21,9 @@
 #include <string_view>
 #include <utility>
 
+#include <QCoreApplication>
+#include <QString>
+
 namespace fs = std::filesystem;
 
 namespace {
@@ -331,7 +334,39 @@ BatchFolderCategorizationResult BatchFolderCategorizer::categorize(
             "Reduce the selection or disable recursive scanning.");
     }
 
-    const std::string response =
-        llm.complete_prompt(prompt, recommended_max_output_tokens(entries.size()));
-    return parse_response(response, entries, options);
+    const int max_tokens = recommended_max_output_tokens(entries.size());
+    const std::string response = llm.complete_prompt(prompt, max_tokens);
+
+    try {
+        return parse_response(response, entries, options);
+    } catch (const std::exception& first_error) {
+        const std::string response_preview =
+            response.size() <= 12000 ? response : response.substr(0, 12000);
+
+        std::ostringstream repair;
+        repair
+            << "Your previous reply could not be parsed as the required JSON.\n"
+            << "Correct it now. Return JSON only: no Markdown, no explanation, no reasoning text.\n"
+            << "The first non-whitespace character must be { and the last must be }.\n"
+            << "Required top-level shape: "
+            << "{\"items\":[{\"id\":0,\"category\":\"Documents\","
+               "\"subcategory\":\"Reports\",\"suggested_name\":\"\"}]}\n"
+            << "Use every input numeric id exactly once and do not invent ids.\n\n"
+            << "ORIGINAL TASK:\n" << prompt << "\n\n"
+            << "INVALID PREVIOUS REPLY:\n" << response_preview;
+
+        const std::string repaired = llm.complete_prompt(repair.str(), max_tokens);
+        try {
+            return parse_response(repaired, entries, options);
+        } catch (const std::exception& second_error) {
+            const QString message = QCoreApplication::translate(
+                "BatchFolderCategorizer",
+                "The AI response could not be parsed as structured JSON after one automatic repair retry. "
+                "Check the selected model/API compatibility or open the prompt editor and try again.\n\n"
+                "First error: %1\nRetry error: %2")
+                .arg(QString::fromUtf8(first_error.what()),
+                     QString::fromUtf8(second_error.what()));
+            throw std::runtime_error(message.toStdString());
+        }
+    }
 }
