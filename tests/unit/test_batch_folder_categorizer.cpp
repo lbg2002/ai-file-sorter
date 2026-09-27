@@ -144,7 +144,11 @@ TEST_CASE("Batch prompt permits safe new category folders without a whitelist")
     BatchFolderCategorizationOptions options;
     options.folder_path = root.string();
 
+    options.existing_directories = {"Research", "Meetings/2026"};
+
     const std::string prompt = BatchFolderCategorizer::build_prompt(entries, options);
     REQUIRE(prompt.find("may propose a new category or subcategory") != std::string::npos);
     REQUIRE(prompt.find("only after the user reviews and approves") != std::string::npos);
+    REQUIRE(prompt.find("Existing folders under the selected root") != std::string::npos);
+    REQUIRE(prompt.find("Meetings/2026") != std::string::npos);
 }
