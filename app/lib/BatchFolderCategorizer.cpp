@@ -162,6 +162,16 @@ std::string constraints_text(const BatchFolderCategorizationOptions& options)
             out << "\n";
         }
     }
+
+    if (!options.existing_directories.empty()) {
+        out << "Existing folders under the selected root (context only; reuse one when it is a good fit):\n";
+        for (const auto& directory : options.existing_directories) {
+            out << "- " << directory << "\n";
+        }
+    } else {
+        out << "Existing folder context: no reusable destination folders were found.\n";
+    }
+
     return out.str();
 }
 
