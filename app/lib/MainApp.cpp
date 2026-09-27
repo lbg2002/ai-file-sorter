@@ -30,6 +30,11 @@
 #include "CategoryLanguage.hpp"
 #include "CategoryLanguageSupport.hpp"
 #include "MainAppUiBuilder.hpp"
+#include "PromptEditorDialog.hpp"
+#include "PromptTemplateStore.hpp"
+#include "ResultIntegrityValidator.hpp"
+#include "RuleEditorDialog.hpp"
+#include "RuleEngine.hpp"
 #include "MenuMnemonicController.hpp"
 #include "ReviewHistoryDialog.hpp"
 #include "SuitabilityBenchmarkDialog.hpp"
@@ -621,6 +626,8 @@ MainApp::MainApp(Settings& settings,
       development_prompt_logging_enabled_(development_mode ? settings.get_development_prompt_logging() : false),
       main_window_state_binder_(std::make_unique<MainWindowStateBinder>(*this))
 {
+    PromptTemplateStore::initialize(runtime_data_dir_);
+    RuleStore::initialize(runtime_data_dir_);
     rebuild_storage_provider_registry();
     progress_controller_.set_show_vision_diagnostics(is_development_mode() || is_test_mode());
     TranslationManager::instance().initialize_for_app(qApp, settings.get_language());
@@ -1540,6 +1547,18 @@ void MainApp::on_analyze_clicked()
         return;
     }
 
+    if (organization_mode_rules_radio && organization_mode_rules_radio->isChecked()) {
+        run_rule_mode();
+        return;
+    }
+
+    try {
+        last_scan_snapshot_ = results_coordinator.list_directory(folder_path, effective_scan_options());
+    } catch (const std::exception& ex) {
+        show_error_dialog(fmt::format("Could not capture the filesystem snapshot: {}", ex.what()));
+        return;
+    }
+
     if (!using_local_llm) {
         if (!Utils::is_network_available()) {
             show_error_dialog(ERR_NO_INTERNET_CONNECTION);
@@ -1592,6 +1611,56 @@ void MainApp::on_analyze_clicked()
     }
 }
 
+
+void MainApp::show_prompt_editor()
+{
+    PromptEditorDialog dialog(this);
+    dialog.exec();
+}
+
+void MainApp::show_rule_editor()
+{
+    RuleEditorDialog dialog(this);
+    dialog.exec();
+}
+
+void MainApp::run_rule_mode()
+{
+    const std::string folder_path = get_folder_path();
+    const auto rules = RuleStore::load();
+    if (rules.empty()) {
+        QMessageBox::information(this,
+                                 tr("Rule mode"),
+                                 tr("No rules are configured. Add at least one rule from Settings -> Manage File Rules."));
+        return;
+    }
+
+    std::vector<FileEntry> snapshot;
+    try {
+        snapshot = results_coordinator.list_directory(folder_path, effective_scan_options());
+    } catch (const std::exception& ex) {
+        show_error_dialog(fmt::format("Could not scan folder for rule mode: {}", ex.what()));
+        return;
+    }
+
+    std::vector<CategorizedFile> results;
+    results.reserve(snapshot.size());
+    for (const auto& entry : snapshot) {
+        if (auto result = RuleEngine::apply_first(entry, rules)) {
+            results.push_back(std::move(*result));
+        }
+    }
+
+    if (results.empty()) {
+        QMessageBox::information(this,
+                                 tr("Rule mode"),
+                                 tr("No scanned items matched the configured rules. No files were changed."));
+        return;
+    }
+
+    populate_tree_view(results);
+    show_results_dialog(results);
+}
 
 void MainApp::on_directory_selected(const QString& path, bool user_initiated)
 {
@@ -2634,6 +2703,11 @@ void MainApp::handle_analysis_finished()
     stop_analysis = false;
 
     if (new_files_to_sort.empty()) {
+        if (!last_scan_snapshot_.empty()) {
+            populate_tree_view(new_files_to_sort);
+            show_results_dialog(new_files_to_sort);
+            return;
+        }
         handle_no_files_to_sort();
         return;
     }
@@ -3496,6 +3570,45 @@ void MainApp::show_results_dialog(const std::vector<CategorizedFile>& results)
     try {
         const bool show_subcategory = use_subcategories_checkbox->isChecked();
         const std::string undo_dir = runtime_data_dir_ + "/undo";
+        const bool rule_mode = organization_mode_rules_radio && organization_mode_rules_radio->isChecked();
+        std::vector<CategorizedFile> review_results = results;
+        ResultIntegrityReport integrity_report;
+
+        if (!rule_mode) {
+            const std::vector<FileEntry> snapshot = !last_scan_snapshot_.empty()
+                ? last_scan_snapshot_
+                : results_coordinator.list_directory(get_folder_path(), effective_scan_options());
+            integrity_report = ResultIntegrityValidator::validate(
+                snapshot, results, get_folder_path(), show_subcategory);
+
+            for (const auto& issue : integrity_report.issues) {
+                if (issue.kind != IntegrityIssueKind::MissingSource) {
+                    continue;
+                }
+
+                const auto issue_path = Utils::utf8_to_path(issue.source_path).lexically_normal();
+                const auto found = std::find_if(snapshot.begin(), snapshot.end(),
+                    [&issue_path](const FileEntry& entry) {
+                        return Utils::utf8_to_path(entry.full_path).lexically_normal() == issue_path;
+                    });
+                if (found == snapshot.end()) {
+                    continue;
+                }
+
+                const std::filesystem::path source_path = Utils::utf8_to_path(found->full_path);
+                CategorizedFile missing{
+                    Utils::path_to_utf8(source_path.parent_path()),
+                    found->file_name,
+                    found->type,
+                    std::string(),
+                    std::string(),
+                    0
+                };
+                missing.rename_only = true;
+                review_results.push_back(std::move(missing));
+            }
+        }
+
         categorization_dialog = std::make_unique<CategorizationDialog>(&db_manager,
                                                                        *active_storage_provider_,
                                                                        show_subcategory,
@@ -3504,7 +3617,10 @@ void MainApp::show_results_dialog(const std::vector<CategorizedFile>& results)
                                                                        this,
                                                                        &user_learning_store_,
                                                                        &review_history_store_);
-        categorization_dialog->show_results(results,
+        if (!rule_mode) {
+            categorization_dialog->set_integrity_report(std::move(integrity_report));
+        }
+        categorization_dialog->show_results(review_results,
                                             get_folder_path(),
                                             settings.get_include_subdirectories(),
                                             settings.get_offer_rename_images(),

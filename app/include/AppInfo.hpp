@@ -3,7 +3,7 @@
 #include <QString>
 
 #ifndef AI_FILE_SORTER_APP_NAME
-#define AI_FILE_SORTER_APP_NAME "AI File Sorter"
+#define AI_FILE_SORTER_APP_NAME "FileSort Guard"
 #endif
 
 inline QString app_display_name() {

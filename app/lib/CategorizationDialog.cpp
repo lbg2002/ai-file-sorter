@@ -22,6 +22,7 @@
 #include <QBrush>
 #include <QCheckBox>
 #include <QCloseEvent>
+#include <QColor>
 #include <QEvent>
 #include <QFrame>
 #include <QHeaderView>
@@ -65,6 +66,7 @@
 #include <chrono>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 
 namespace {
 
@@ -237,6 +239,12 @@ bool CategorizationDialog::is_dialog_valid() const
 }
 
 
+void CategorizationDialog::set_integrity_report(ResultIntegrityReport report)
+{
+    integrity_report_ = std::move(report);
+    update_integrity_summary();
+}
+
 void CategorizationDialog::show_results(const std::vector<CategorizedFile>& files,
                                         const std::string& base_dir_override,
                                         bool include_subdirectories,
@@ -296,6 +304,7 @@ void CategorizationDialog::show_results(const std::vector<CategorizedFile>& file
     if (auto_approve_filename_changes_ || auto_approve_categorization_) {
         apply_auto_approval_to_rows();
     }
+    update_integrity_summary();
     exec();
 }
 
@@ -341,6 +350,12 @@ void CategorizationDialog::setup_ui()
     dry_run_checkbox = new QCheckBox(this);
     dry_run_checkbox->setChecked(false);
     scroll_layout->addWidget(dry_run_checkbox);
+
+    integrity_summary_label = new QLabel(this);
+    integrity_summary_label->setWordWrap(true);
+    integrity_summary_label->setVisible(false);
+    integrity_summary_label->setObjectName(QStringLiteral("aifsIntegritySummary"));
+    scroll_layout->addWidget(integrity_summary_label);
 
     rename_images_only_checkbox = new QCheckBox(this);
     rename_images_only_checkbox->setChecked(false);
@@ -682,6 +697,121 @@ void CategorizationDialog::ensure_unique_suggested_names_in_model()
             }
         }
     }
+}
+
+void CategorizationDialog::update_integrity_summary()
+{
+    if (!integrity_summary_label || !model) {
+        return;
+    }
+
+    const int duplicates = integrity_report_.count(IntegrityIssueKind::DuplicateSource);
+    const int missing = integrity_report_.count(IntegrityIssueKind::MissingSource);
+    const int unknown = integrity_report_.count(IntegrityIssueKind::UnknownSource);
+    const int conflicts = integrity_report_.count(IntegrityIssueKind::TargetConflict);
+    const int total = duplicates + missing + unknown + conflicts;
+
+    if (total == 0) {
+        integrity_summary_label->setVisible(false);
+        if (confirm_button) {
+            confirm_button->setEnabled(true);
+        }
+        return;
+    }
+
+    integrity_summary_label->setVisible(true);
+    integrity_summary_label->setText(
+        tr("Safety check: %1 duplicate source(s), %2 missing item(s), %3 unknown source(s), "
+           "%4 destination conflict(s). Missing items remain in their original location. "
+           "Duplicate, unknown, or destination-conflict rows must be resolved before processing.")
+            .arg(duplicates)
+            .arg(missing)
+            .arg(unknown)
+            .arg(conflicts));
+
+    const auto priority = [](IntegrityIssueKind kind) {
+        switch (kind) {
+        case IntegrityIssueKind::UnknownSource: return 4;
+        case IntegrityIssueKind::DuplicateSource: return 3;
+        case IntegrityIssueKind::TargetConflict: return 2;
+        case IntegrityIssueKind::MissingSource: return 1;
+        }
+        return 0;
+    };
+
+    for (int row = 0; row < model->rowCount(); ++row) {
+        auto* file_item = model->item(row, ColumnFile);
+        if (!file_item) {
+            continue;
+        }
+        const CategorizedFile* source_file =
+            row >= 0 && static_cast<std::size_t>(row) < categorized_files.size()
+                ? &categorized_files[static_cast<std::size_t>(row)]
+                : nullptr;
+        if (!source_file) {
+            continue;
+        }
+
+        const std::string source = ResultIntegrityValidator::source_path_for(*source_file);
+        const auto issues = integrity_report_.issues_for_source(source);
+        if (issues.empty()) {
+            continue;
+        }
+
+        const IntegrityIssue* selected = &issues.front();
+        for (const auto& issue : issues) {
+            if (priority(issue.kind) > priority(selected->kind)) {
+                selected = &issue;
+            }
+        }
+
+        QColor background;
+        QString status;
+        switch (selected->kind) {
+        case IntegrityIssueKind::DuplicateSource:
+            background = QColor(255, 243, 205);
+            status = tr("Duplicate source");
+            break;
+        case IntegrityIssueKind::MissingSource:
+            background = QColor(253, 232, 232);
+            status = tr("Missing from result");
+            break;
+        case IntegrityIssueKind::UnknownSource:
+            background = QColor(243, 232, 255);
+            status = tr("Unknown source");
+            break;
+        case IntegrityIssueKind::TargetConflict:
+            background = QColor(255, 228, 230);
+            status = tr("Destination conflict");
+            break;
+        }
+
+        for (int column = 0; column < model->columnCount(); ++column) {
+            if (auto* item = model->item(row, column)) {
+                item->setBackground(background);
+                item->setForeground(QColor(32, 32, 32));
+                item->setToolTip(QString::fromStdString(selected->message));
+            }
+        }
+        if (auto* select_item = model->item(row, ColumnSelect)) {
+            select_item->setCheckState(Qt::Unchecked);
+            select_item->setEnabled(false);
+        }
+        if (auto* status_item = model->item(row, ColumnStatus)) {
+            status_item->setText(status);
+        }
+    }
+
+    if (confirm_button) {
+        confirm_button->setEnabled(!integrity_report_.has_blocking_issues());
+        if (integrity_report_.has_blocking_issues()) {
+            confirm_button->setToolTip(
+                tr("Processing is disabled while blocking safety anomalies are present."));
+        } else {
+            confirm_button->setToolTip(QString());
+        }
+    }
+    update_select_all_state();
 }
 
 void CategorizationDialog::populate_model()

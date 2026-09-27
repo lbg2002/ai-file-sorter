@@ -3,6 +3,7 @@
 
 #include "CategoryLanguage.hpp"
 #include "Types.hpp"
+#include "ResultIntegrityValidator.hpp"
 
 #include <QCoreApplication>
 #include <QDialog>
@@ -26,6 +27,7 @@ class QPushButton;
 class QTableView;
 class QCheckBox;
 class QStandardItem;
+class QLabel;
 
 class CategorizationDialog : public QDialog
 {
@@ -116,6 +118,7 @@ public:
      * @param auto_approve_filename_changes Whether actionable filename changes should be preselected.
      * @param auto_approve_categorization Whether actionable categorization rows should be preselected.
      */
+    void set_integrity_report(ResultIntegrityReport report);
     void show_results(const std::vector<CategorizedFile>& categorized_files,
                       const std::string& base_dir_override = std::string(),
                       bool include_subdirectories = false,
@@ -193,6 +196,7 @@ private:
     void apply_theme_styles();
     void setup_ui();
     void populate_model();
+    void update_integrity_summary();
     void ensure_unique_suggested_names_in_model();
     /**
      * @brief Persist reviewed categorization results and optionally record approved learning examples.
@@ -403,6 +407,7 @@ private:
     QTableView* table_view{nullptr};
     QStandardItemModel* model{nullptr};
     QPushButton* confirm_button{nullptr};
+    QLabel* integrity_summary_label{nullptr};
     QPushButton* continue_button{nullptr};
     QPushButton* close_button{nullptr};
     QPushButton* preview_button{nullptr};
@@ -419,6 +424,7 @@ private:
 
     std::vector<MoveRecord> move_history_;
     std::vector<PreviewRecord> dry_run_plan_;
+    ResultIntegrityReport integrity_report_;
 
     bool updating_select_all{false};
     bool suppress_item_changed_{false};
