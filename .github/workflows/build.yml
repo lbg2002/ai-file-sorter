@@ -31,6 +31,7 @@ jobs:
       AI_FILE_SORTER_LINUX_RUNTIME_JOBS: 2
       CUDAARCHS: "75;80;86;89;90"
       QT_QPA_PLATFORM: offscreen
+      AIFS_PACKAGE_REVISION: guard.${{ github.run_number }}
 
     steps:
       - name: Install build dependencies
