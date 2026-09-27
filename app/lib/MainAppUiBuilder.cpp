@@ -443,8 +443,9 @@ void MainAppUiBuilder::build_central_panel(MainApp& app) {
     main_layout->addLayout(audio_video_row);
 
     app.organization_mode_heading = new QLabel(QObject::tr("Organization mode"), central);
-    app.organization_mode_ai_radio = new QRadioButton(QObject::tr("AI mode"), central);
+    app.organization_mode_ai_radio = new QRadioButton(QObject::tr("AI mode (one request per folder)"), central);
     app.organization_mode_rules_radio = new QRadioButton(QObject::tr("Rule mode"), central);
+    app.ai_model_button = new QPushButton(QObject::tr("AI model…"), central);
     app.organization_mode_ai_radio->setChecked(true);
 
     app.categorization_style_heading = new QLabel(central);
@@ -475,6 +476,7 @@ void MainAppUiBuilder::build_central_panel(MainApp& app) {
     auto* organization_mode_row = new QHBoxLayout();
     organization_mode_row->addWidget(app.organization_mode_ai_radio);
     organization_mode_row->addWidget(app.organization_mode_rules_radio);
+    organization_mode_row->addWidget(app.ai_model_button);
     organization_mode_row->addStretch();
     categorization_layout->addWidget(app.organization_mode_heading);
     categorization_layout->addLayout(organization_mode_row);
@@ -496,8 +498,10 @@ void MainAppUiBuilder::build_central_panel(MainApp& app) {
     control_block->addSpacing(4);
     control_block->addLayout(whitelist_row);
 
+    QObject::connect(app.ai_model_button, &QPushButton::clicked, &app, &MainApp::show_llm_selection_dialog);
     QObject::connect(app.organization_mode_rules_radio, &QRadioButton::toggled, &app, [&app](bool rules_mode) {
         const bool ai_mode = !rules_mode;
+        if (app.ai_model_button) app.ai_model_button->setEnabled(ai_mode);
         if (app.categorization_style_heading) app.categorization_style_heading->setEnabled(ai_mode);
         if (app.categorization_style_refined_radio) app.categorization_style_refined_radio->setEnabled(ai_mode);
         if (app.categorization_style_consistent_radio) app.categorization_style_consistent_radio->setEnabled(ai_mode);
