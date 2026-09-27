@@ -141,6 +141,18 @@ std::string PromptTemplateStore::render_batch(const std::string& folder_path,
         ? g_template
         : default_template();
 
+    // Keep the inventory and machine-readable contract mandatory even when a
+    // user has an older/custom prompt that omits the new batch variables.
+    if (rendered.find("{{inventory_json}}") == std::string::npos) {
+        rendered += "\n\nComplete folder inventory (mandatory source of truth):\n{{inventory_json}}";
+    }
+    if (rendered.find("{{output_schema}}") == std::string::npos) {
+        rendered += "\n\nReturn JSON only using this schema:\n{{output_schema}}";
+    }
+    rendered +=
+        "\n\nMandatory safety contract: use only input numeric ids; return each selected id at most once; "
+        "never invent source paths, destination paths, delete operations, overwrite operations, or shell commands.";
+
     replace_all(rendered, "{{folder_path}}", folder_path);
     replace_all(rendered, "{{inventory_json}}", inventory_json);
     replace_all(rendered, "{{recursive}}", recursive ? "true" : "false");
