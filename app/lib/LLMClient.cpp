@@ -59,11 +59,11 @@ long resolve_custom_timeout_seconds() {
             return value;
         }
     }
-    return 60L;
+    return 120L;
 }
 
 long resolve_openai_timeout_seconds() {
-    return 5L;
+    return 120L;
 }
 
 long resolve_timeout_seconds(const std::string& base_url) {
