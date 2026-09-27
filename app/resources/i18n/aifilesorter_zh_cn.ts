@@ -243,7 +243,7 @@
     <message>
         <location filename="../../lib/CategorizationDialog.cpp" line="2934"/>
         <source>Process</source>
-        <translation>过程</translation>
+        <translation>处理</translation>
     </message>
     <message>
         <location filename="../../lib/CategorizationDialog.cpp" line="2935"/>
@@ -273,7 +273,7 @@
     <message>
         <location filename="../../lib/CategorizationDialog.cpp" line="2940"/>
         <source>Status</source>
-        <translation>地位</translation>
+        <translation>状态</translation>
     </message>
     <message>
         <location filename="../../lib/CategorizationDialog.cpp" line="2941"/>
@@ -283,7 +283,7 @@
     <message>
         <location filename="../../lib/CategorizationDialog.cpp" line="2964"/>
         <source>Moved</source>
-        <translation>搬家了</translation>
+        <translation>已移动</translation>
     </message>
     <message>
         <location filename="../../lib/CategorizationDialog.cpp" line="2967"/>
@@ -628,7 +628,7 @@ Supports: Nvidia (CUDA), Apple (Metal), CPU.</source>
     <message>
         <location filename="../../lib/LLMSelectionDialog.cpp" line="1524"/>
         <source>Recommended</source>
-        <translation>受到推崇的</translation>
+        <translation>推荐</translation>
     </message>
     <message>
         <location filename="../../lib/LLMSelectionDialog.cpp" line="305"/>
@@ -645,7 +645,7 @@ Supports: Nvidia (CUDA), Apple (Metal), CPU.</source>
     <message>
         <location filename="../../lib/LLMSelectionDialog.cpp" line="317"/>
         <source>Gemini (Google AI Studio API key)</source>
-        <translation>双子座（Google AI Studio API 密钥）</translation>
+        <translation>Gemini（Google AI Studio API 密钥）</translation>
     </message>
     <message>
         <location filename="../../lib/LLMSelectionDialog.cpp" line="319"/>
@@ -666,7 +666,7 @@ Supports: Nvidia (CUDA), Apple (Metal), CPU.</source>
     <message>
         <location filename="../../lib/LLMSelectionDialog.cpp" line="336"/>
         <source>Gemini API key</source>
-        <translation>双子座 API 键</translation>
+        <translation>Gemini API 密钥</translation>
     </message>
     <message>
         <location filename="../../lib/LLMSelectionDialog.cpp" line="341"/>
@@ -1600,6 +1600,14 @@ Expected broad categories:
     <message>
         <source>No scanned items matched the configured rules. No files were changed.</source>
         <translation>扫描到的项目均未匹配已配置规则，没有文件被修改。</translation>
+    </message>
+    <message>
+        <source>Analysis failed: %1</source>
+        <translation>分析失败：%1</translation>
+    </message>
+    <message>
+        <source>Could not start analysis: %1</source>
+        <translation>无法启动分析：%1</translation>
     </message>
 </context>
 <context>
@@ -3230,6 +3238,19 @@ Please update to continue. If you choose to quit, the application will close.</s
     <message>
         <source>Could not save rules.</source>
         <translation>无法保存规则。</translation>
+    </message>
+</context>
+<context>
+    <name>BatchFolderCategorizer</name>
+    <message>
+        <source>The AI response could not be parsed as structured JSON after one automatic repair retry. Check the selected model/API compatibility or open the prompt editor and try again.
+
+First error: %1
+Retry error: %2</source>
+        <translation>AI 返回内容在自动修复重试一次后仍无法解析为结构化 JSON。请检查所选模型/API 是否兼容，或打开提示词编辑器调整后重试。
+
+首次错误：%1
+重试错误：%2</translation>
     </message>
 </context>
 </TS>
