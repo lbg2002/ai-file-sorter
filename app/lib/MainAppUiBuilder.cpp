@@ -442,9 +442,9 @@ void MainAppUiBuilder::build_central_panel(MainApp& app) {
     audio_video_row->addStretch(1);
     main_layout->addLayout(audio_video_row);
 
-    app.organization_mode_heading = new QLabel(tr("Organization mode"), central);
-    app.organization_mode_ai_radio = new QRadioButton(tr("AI mode"), central);
-    app.organization_mode_rules_radio = new QRadioButton(tr("Rule mode"), central);
+    app.organization_mode_heading = new QLabel(QObject::tr("Organization mode"), central);
+    app.organization_mode_ai_radio = new QRadioButton(QObject::tr("AI mode"), central);
+    app.organization_mode_rules_radio = new QRadioButton(QObject::tr("Rule mode"), central);
     app.organization_mode_ai_radio->setChecked(true);
 
     app.categorization_style_heading = new QLabel(central);
@@ -765,10 +765,10 @@ void MainAppUiBuilder::build_settings_menu(MainApp& app) {
     app.toggle_llm_action = app.settings_menu->addAction(llm_menu_icon(app), QString());
     QObject::connect(app.toggle_llm_action, &QAction::triggered, &app, &MainApp::show_llm_selection_dialog);
 
-    app.edit_prompt_action = app.settings_menu->addAction(tr("Edit AI Prompt…"));
+    app.edit_prompt_action = app.settings_menu->addAction(QObject::tr("Edit AI Prompt…"));
     QObject::connect(app.edit_prompt_action, &QAction::triggered, &app, &MainApp::show_prompt_editor);
 
-    app.manage_rules_action = app.settings_menu->addAction(tr("Manage File Rules…"));
+    app.manage_rules_action = app.settings_menu->addAction(QObject::tr("Manage File Rules…"));
     QObject::connect(app.manage_rules_action, &QAction::triggered, &app, &MainApp::show_rule_editor);
 
     app.manage_whitelists_action = app.settings_menu->addAction(whitelist_menu_icon(app), QString());
