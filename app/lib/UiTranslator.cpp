@@ -1,6 +1,7 @@
 #include "UiTranslator.hpp"
 
 #include "Language.hpp"
+#include "AppInfo.hpp"
 #include "CategoryLanguage.hpp"
 #include "MenuMnemonicController.hpp"
 #include "Settings.hpp"
@@ -189,7 +190,7 @@ void UiTranslator::retranslate_all(const State& state) const
 
 void UiTranslator::translate_window_title() const
 {
-    deps_.window.setWindowTitle(QStringLiteral("AI File Sorter"));
+    deps_.window.setWindowTitle(app_display_name());
 }
 
 void UiTranslator::translate_primary_controls(bool analysis_in_progress) const
