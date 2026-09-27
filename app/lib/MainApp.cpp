@@ -1552,6 +1552,13 @@ void MainApp::on_analyze_clicked()
         return;
     }
 
+    try {
+        last_scan_snapshot_ = results_coordinator.list_directory(folder_path, effective_scan_options());
+    } catch (const std::exception& ex) {
+        show_error_dialog(fmt::format("Could not capture the filesystem snapshot: {}", ex.what()));
+        return;
+    }
+
     if (!using_local_llm) {
         if (!Utils::is_network_available()) {
             show_error_dialog(ERR_NO_INTERNET_CONNECTION);
@@ -2696,6 +2703,11 @@ void MainApp::handle_analysis_finished()
     stop_analysis = false;
 
     if (new_files_to_sort.empty()) {
+        if (!last_scan_snapshot_.empty()) {
+            populate_tree_view(new_files_to_sort);
+            show_results_dialog(new_files_to_sort);
+            return;
+        }
         handle_no_files_to_sort();
         return;
     }
@@ -3563,8 +3575,9 @@ void MainApp::show_results_dialog(const std::vector<CategorizedFile>& results)
         ResultIntegrityReport integrity_report;
 
         if (!rule_mode) {
-            const auto snapshot = results_coordinator.list_directory(
-                get_folder_path(), effective_scan_options());
+            const std::vector<FileEntry> snapshot = !last_scan_snapshot_.empty()
+                ? last_scan_snapshot_
+                : results_coordinator.list_directory(get_folder_path(), effective_scan_options());
             integrity_report = ResultIntegrityValidator::validate(
                 snapshot, results, get_folder_path(), show_subcategory);
 
