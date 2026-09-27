@@ -455,6 +455,213 @@ QString review_dialog_style_sheet(const QPalette& palette)
              css_color(colors.primary_pressed_border));
 }
 
+QString main_window_style_sheet(const QPalette& palette)
+{
+    const ThemeColors colors = build_theme_colors(palette);
+    const QColor muted_text = blend_colors(colors.text, colors.panel_background, 0.42);
+    return QStringLiteral(R"(
+        QWidget#aifsMainSurface {
+            background-color: %1;
+        }
+        QFrame#aifsCard {
+            background-color: %2;
+            border: 1px solid %3;
+            border-radius: 12px;
+        }
+        QLabel#aifsSectionTitle {
+            color: %4;
+            font-weight: 700;
+            font-size: 10.5pt;
+            padding-bottom: 2px;
+        }
+        QLineEdit,
+        QComboBox,
+        QPlainTextEdit,
+        QTableWidget {
+            background-color: %5;
+            color: %4;
+            border: 1px solid %6;
+            border-radius: 8px;
+            padding: 7px 9px;
+            selection-background-color: %7;
+            selection-color: %8;
+        }
+        QLineEdit:focus,
+        QComboBox:focus,
+        QPlainTextEdit:focus,
+        QTableWidget:focus {
+            border: 1px solid %7;
+        }
+        QPushButton {
+            background-color: %9;
+            color: %10;
+            border: 1px solid %6;
+            border-radius: 8px;
+            padding: 7px 13px;
+            min-height: 24px;
+        }
+        QPushButton:hover {
+            background-color: %11;
+            border-color: %12;
+        }
+        QPushButton:pressed {
+            background-color: %13;
+            border-color: %14;
+        }
+        QPushButton:disabled {
+            background-color: %15;
+            border-color: %16;
+            color: %17;
+        }
+        QPushButton#aifsPrimaryButton {
+            background-color: %7;
+            color: %8;
+            border-color: %18;
+            font-weight: 700;
+            padding: 9px 18px;
+            min-height: 28px;
+        }
+        QPushButton#aifsPrimaryButton:hover {
+            background-color: %19;
+            border-color: %20;
+        }
+        QPushButton#aifsPrimaryButton:pressed {
+            background-color: %21;
+            border-color: %22;
+        }
+        QPushButton#aifsSecondaryButton {
+            font-weight: 600;
+        }
+        QCheckBox,
+        QRadioButton {
+            color: %4;
+            spacing: 7px;
+            padding: 2px 1px;
+        }
+        QCheckBox::indicator,
+        QRadioButton::indicator {
+            width: 17px;
+            height: 17px;
+        }
+        QMenuBar {
+            background: transparent;
+            spacing: 3px;
+        }
+        QMenuBar::item {
+            padding: 6px 9px;
+            border-radius: 6px;
+        }
+        QMenuBar::item:selected,
+        QMenu::item:selected {
+            background-color: %11;
+        }
+        QMenu {
+            background-color: %2;
+            color: %4;
+            border: 1px solid %3;
+            border-radius: 8px;
+            padding: 5px;
+        }
+        QMenu::item {
+            padding: 6px 22px 6px 10px;
+            border-radius: 5px;
+        }
+        QStatusBar {
+            color: %23;
+        }
+    )")
+        .arg(css_color(palette.color(QPalette::Window)),
+             css_color(colors.panel_background),
+             css_color(colors.border),
+             css_color(colors.text),
+             css_color(colors.view_background),
+             css_color(colors.button_border),
+             css_color(colors.selection_background),
+             css_color(colors.selection_text),
+             css_color(colors.button_background),
+             css_color(colors.button_text),
+             css_color(colors.button_hover_background),
+             css_color(colors.button_hover_border),
+             css_color(colors.button_pressed_background),
+             css_color(colors.button_pressed_border),
+             css_color(colors.button_disabled_background),
+             css_color(colors.button_disabled_border),
+             css_color(colors.button_disabled_text),
+             css_color(colors.primary_border),
+             css_color(colors.primary_hover_background),
+             css_color(colors.primary_hover_border),
+             css_color(colors.primary_pressed_background),
+             css_color(colors.primary_pressed_border),
+             css_color(muted_text));
+}
+
+QString utility_dialog_style_sheet(const QPalette& palette)
+{
+    const ThemeColors colors = build_theme_colors(palette);
+    return QStringLiteral(R"(
+        QDialog {
+            background-color: %1;
+            color: %2;
+        }
+        QLabel {
+            color: %2;
+        }
+        QLineEdit,
+        QComboBox,
+        QPlainTextEdit,
+        QTableWidget {
+            background-color: %3;
+            color: %2;
+            border: 1px solid %4;
+            border-radius: 8px;
+            padding: 7px 9px;
+            selection-background-color: %5;
+            selection-color: %6;
+        }
+        QHeaderView::section {
+            background-color: %7;
+            color: %2;
+            border: none;
+            border-bottom: 1px solid %4;
+            padding: 7px;
+            font-weight: 600;
+        }
+        QPushButton {
+            background-color: %8;
+            color: %9;
+            border: 1px solid %4;
+            border-radius: 8px;
+            padding: 7px 13px;
+            min-height: 24px;
+        }
+        QPushButton:hover {
+            background-color: %10;
+            border-color: %11;
+        }
+        QPushButton:pressed {
+            background-color: %12;
+            border-color: %13;
+        }
+        QCheckBox {
+            spacing: 7px;
+            padding: 2px 0;
+        }
+    )")
+        .arg(css_color(palette.color(QPalette::Window)),
+             css_color(colors.text),
+             css_color(colors.view_background),
+             css_color(colors.button_border),
+             css_color(colors.selection_background),
+             css_color(colors.selection_text),
+             css_color(colors.header_background),
+             css_color(colors.button_background),
+             css_color(colors.button_text),
+             css_color(colors.button_hover_background),
+             css_color(colors.button_hover_border),
+             css_color(colors.button_pressed_background),
+             css_color(colors.button_pressed_border));
+}
+
 QString progress_dialog_style_sheet(const QPalette& palette)
 {
     const ThemeColors colors = build_theme_colors(palette);
