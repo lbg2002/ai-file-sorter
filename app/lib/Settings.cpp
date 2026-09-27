@@ -564,7 +564,8 @@ void Settings::load_basic_settings(const std::function<bool(const char*, bool)>&
         load_bool("ReviewAutoApproveCategorization", false);
     skipped_version = config.getValue("Settings", "SkippedVersion", "0.0.0");
     whats_new_version_shown = config.getValue("Settings", "WhatsNewVersionShown", "");
-    if (config.hasValue("Settings", "Language")) {
+    explicit_language_selected = config.hasValue("Settings", "Language");
+    if (explicit_language_selected) {
         language = languageFromString(QString::fromStdString(config.getValue("Settings", "Language", "English")));
     } else {
         language = system_default_language();
@@ -1476,9 +1477,16 @@ Language Settings::get_language() const
 }
 
 
+bool Settings::has_explicit_language() const
+{
+    return explicit_language_selected;
+}
+
+
 void Settings::set_language(Language value)
 {
     language = value;
+    explicit_language_selected = true;
 }
 
 int Settings::get_total_categorized_files() const
