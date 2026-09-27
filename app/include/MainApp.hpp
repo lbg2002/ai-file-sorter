@@ -471,6 +471,7 @@ private:
     std::vector<FileEntry> files_to_categorize;
     std::vector<CategorizedFile> new_files_to_sort;
     std::vector<FileEntry> last_scan_snapshot_;
+    std::vector<FileEntry> last_existing_directory_snapshot_;
     std::string last_scan_root_;
 
     QPointer<QLineEdit> path_entry;
