@@ -1,4 +1,5 @@
 #include "CustomApiDialog.hpp"
+#include "AppTheme.hpp"
 
 #include <QCheckBox>
 #include <QDialogButtonBox>
@@ -13,6 +14,7 @@
 CustomApiDialog::CustomApiDialog(QWidget* parent)
     : QDialog(parent)
 {
+    setStyleSheet(AppTheme::utility_dialog_style_sheet(palette()));
     setup_ui();
     wire_signals();
 }
@@ -20,6 +22,7 @@ CustomApiDialog::CustomApiDialog(QWidget* parent)
 CustomApiDialog::CustomApiDialog(QWidget* parent, const CustomApiEndpoint& existing)
     : QDialog(parent)
 {
+    setStyleSheet(AppTheme::utility_dialog_style_sheet(palette()));
     setup_ui();
     wire_signals();
     apply_existing(existing);
