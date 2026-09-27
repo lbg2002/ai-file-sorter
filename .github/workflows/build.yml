@@ -119,17 +119,17 @@ jobs:
       QT_QPA_PLATFORM: offscreen
     steps:
       - name: Install build dependencies
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.linux_target == 'all' || inputs.linux_target == matrix.name }}
+        if: ${{ (github.event_name != 'pull_request' || matrix.name == 'ubuntu-lts') && (github.event_name != 'workflow_dispatch' || inputs.linux_target == 'all' || inputs.linux_target == matrix.name) }}
         run: ${{ matrix.install }}
 
       - name: Check out repository
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.linux_target == 'all' || inputs.linux_target == matrix.name }}
+        if: ${{ (github.event_name != 'pull_request' || matrix.name == 'ubuntu-lts') && (github.event_name != 'workflow_dispatch' || inputs.linux_target == 'all' || inputs.linux_target == matrix.name) }}
         uses: actions/checkout@v7
         with:
           submodules: recursive
 
       - name: Show toolchain
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.linux_target == 'all' || inputs.linux_target == matrix.name }}
+        if: ${{ (github.event_name != 'pull_request' || matrix.name == 'ubuntu-lts') && (github.event_name != 'workflow_dispatch' || inputs.linux_target == 'all' || inputs.linux_target == matrix.name) }}
         run: |
           cat /etc/os-release
           cmake --version
@@ -144,18 +144,22 @@ jobs:
           fi
 
       - name: Build llama runtime variants
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.linux_target == 'all' || inputs.linux_target == matrix.name }}
+        if: ${{ (github.event_name != 'pull_request' || matrix.name == 'ubuntu-lts') && (github.event_name != 'workflow_dispatch' || inputs.linux_target == 'all' || inputs.linux_target == matrix.name) }}
         run: |
           export PATH="/usr/local/cuda-13.4/bin:/usr/local/cuda-13.3/bin:/usr/local/cuda-13.2/bin:/usr/local/cuda-13.1/bin:/usr/local/cuda/bin:/opt/cuda/bin:$PATH"
           ./app/scripts/build_llama_linux.sh cuda=off vulkan=on blas=on
-          ./app/scripts/build_llama_linux.sh cuda=on vulkan=off blas=on cuda-arch="$CUDAARCHS"
+          if [[ "${{ github.event_name }}" != "pull_request" ]]; then
+            ./app/scripts/build_llama_linux.sh cuda=on vulkan=off blas=on cuda-arch="$CUDAARCHS"
+          else
+            echo "Pull request quick build: skipping CUDA runtime compilation; main/release builds still include CUDA."
+          fi
 
       - name: Build app
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.linux_target == 'all' || inputs.linux_target == matrix.name }}
+        if: ${{ (github.event_name != 'pull_request' || matrix.name == 'ubuntu-lts') && (github.event_name != 'workflow_dispatch' || inputs.linux_target == 'all' || inputs.linux_target == matrix.name) }}
         run: make -C app -j"$AI_FILE_SORTER_BUILD_JOBS"
 
       - name: Package artifact
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.linux_target == 'all' || inputs.linux_target == matrix.name }}
+        if: ${{ (github.event_name != 'pull_request' || matrix.name == 'ubuntu-lts') && (github.event_name != 'workflow_dispatch' || inputs.linux_target == 'all' || inputs.linux_target == matrix.name) }}
         run: |
           mkdir -p dist/ci-artifacts
           case "${{ matrix.artifact_kind }}" in
@@ -179,7 +183,7 @@ jobs:
           esac
 
       - name: Upload artifact
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.linux_target == 'all' || inputs.linux_target == matrix.name }}
+        if: ${{ (github.event_name != 'pull_request' || matrix.name == 'ubuntu-lts') && (github.event_name != 'workflow_dispatch' || inputs.linux_target == 'all' || inputs.linux_target == matrix.name) }}
         uses: actions/upload-artifact@v7
         with:
           name: aifilesorter-linux-${{ matrix.name }}
