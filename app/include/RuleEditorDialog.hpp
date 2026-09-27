@@ -1,11 +1,13 @@
 #pragma once
 
+#include <QCoreApplication>
 #include <QDialog>
 
 class QTableWidget;
 class QLabel;
 
 class RuleEditorDialog : public QDialog {
+    Q_DECLARE_TR_FUNCTIONS(RuleEditorDialog)
 public:
     explicit RuleEditorDialog(QWidget* parent = nullptr);
 
