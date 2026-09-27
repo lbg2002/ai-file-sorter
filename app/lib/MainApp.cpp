@@ -3575,18 +3575,18 @@ void MainApp::show_results_dialog(const std::vector<CategorizedFile>& results)
                     continue;
                 }
 
+                const auto issue_path = Utils::utf8_to_path(issue.source_path).lexically_normal();
                 const auto found = std::find_if(snapshot.begin(), snapshot.end(),
-                    [&issue](const FileEntry& entry) {
-                        return std::filesystem::path(entry.full_path).lexically_normal() ==
-                               std::filesystem::path(issue.source_path).lexically_normal();
+                    [&issue_path](const FileEntry& entry) {
+                        return Utils::utf8_to_path(entry.full_path).lexically_normal() == issue_path;
                     });
                 if (found == snapshot.end()) {
                     continue;
                 }
 
-                const std::filesystem::path source_path(found->full_path);
+                const std::filesystem::path source_path = Utils::utf8_to_path(found->full_path);
                 CategorizedFile missing{
-                    source_path.parent_path().string(),
+                    Utils::path_to_utf8(source_path.parent_path()),
                     found->file_name,
                     found->type,
                     std::string(),
