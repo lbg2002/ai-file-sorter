@@ -41,3 +41,18 @@ TEST_CASE("RuleEngine uses first matching rule")
     REQUIRE(result.has_value());
     REQUIRE(result->category == "Meetings");
 }
+
+
+TEST_CASE("RuleStore preserves rules with empty subcategories")
+{
+    TempDir temp;
+    RuleStore::initialize(temp.path().string());
+
+    FileRule rule{true, "extension", "equals", ".txt", "Documents", ""};
+    REQUIRE(RuleStore::save({rule}));
+
+    const auto loaded = RuleStore::load();
+    REQUIRE(loaded.size() == 1);
+    REQUIRE(loaded.front().category == "Documents");
+    REQUIRE(loaded.front().subcategory.empty());
+}
