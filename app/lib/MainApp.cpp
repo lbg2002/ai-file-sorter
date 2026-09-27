@@ -3690,6 +3690,10 @@ void MainApp::show_results_dialog(const std::vector<CategorizedFile>& results)
                                                                        &user_learning_store_,
                                                                        &review_history_store_);
         if (!rule_mode) {
+            categorization_dialog->set_integrity_context(
+                !last_scan_snapshot_.empty() ? last_scan_snapshot_ : std::vector<FileEntry>{},
+                get_folder_path(),
+                show_subcategory);
             categorization_dialog->set_integrity_report(std::move(integrity_report));
         }
         categorization_dialog->show_results(review_results,
