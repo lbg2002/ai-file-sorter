@@ -1621,7 +1621,9 @@ void MainApp::on_analyze_clicked()
                 perform_batch_ai_analysis();
             } catch (const std::exception& ex) {
                 core_logger->error("Exception during analysis: {}", ex.what());
-                post_analysis_failure(std::string("Analysis error: ") + ex.what());
+                const QString message =
+                    tr("Analysis failed: %1").arg(QString::fromUtf8(ex.what()));
+                post_analysis_failure(message.toStdString());
             }
         });
     } catch (const std::exception& ex) {
@@ -1629,7 +1631,8 @@ void MainApp::on_analyze_clicked()
         update_analyze_button_state(false);
         close_progress_dialog();
         core_logger->error("Could not start analysis: {}", ex.what());
-        show_error_dialog(std::string("Could not start analysis: ") + ex.what());
+        show_error_dialog(
+            tr("Could not start analysis: %1").arg(QString::fromUtf8(ex.what())).toStdString());
     }
 }
 
