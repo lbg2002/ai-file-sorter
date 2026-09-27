@@ -17,6 +17,7 @@ struct BatchFolderCategorizationOptions {
     bool prefer_stable_categories{false};
     std::vector<std::string> allowed_categories;
     std::unordered_map<std::string, std::vector<std::string>> allowed_subcategories_by_category;
+    std::vector<std::string> existing_directories;
 };
 
 struct BatchFolderCategorizationResult {
