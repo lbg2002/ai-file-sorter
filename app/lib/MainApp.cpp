@@ -3560,6 +3560,44 @@ void MainApp::show_results_dialog(const std::vector<CategorizedFile>& results)
     try {
         const bool show_subcategory = use_subcategories_checkbox->isChecked();
         const std::string undo_dir = runtime_data_dir_ + "/undo";
+        const bool rule_mode = organization_mode_rules_radio && organization_mode_rules_radio->isChecked();
+        std::vector<CategorizedFile> review_results = results;
+        ResultIntegrityReport integrity_report;
+
+        if (!rule_mode) {
+            FileScanner scanner;
+            const auto snapshot = scanner.get_directory_entries(get_folder_path(), effective_scan_options());
+            integrity_report = ResultIntegrityValidator::validate(
+                snapshot, results, get_folder_path(), show_subcategory);
+
+            for (const auto& issue : integrity_report.issues) {
+                if (issue.kind != IntegrityIssueKind::MissingSource) {
+                    continue;
+                }
+
+                const auto found = std::find_if(snapshot.begin(), snapshot.end(),
+                    [&issue](const FileEntry& entry) {
+                        return std::filesystem::path(entry.full_path).lexically_normal() ==
+                               std::filesystem::path(issue.source_path).lexically_normal();
+                    });
+                if (found == snapshot.end()) {
+                    continue;
+                }
+
+                const std::filesystem::path source_path(found->full_path);
+                CategorizedFile missing{
+                    source_path.parent_path().string(),
+                    found->file_name,
+                    found->type,
+                    std::string(),
+                    std::string(),
+                    0
+                };
+                missing.rename_only = true;
+                review_results.push_back(std::move(missing));
+            }
+        }
+
         categorization_dialog = std::make_unique<CategorizationDialog>(&db_manager,
                                                                        *active_storage_provider_,
                                                                        show_subcategory,
@@ -3568,7 +3606,10 @@ void MainApp::show_results_dialog(const std::vector<CategorizedFile>& results)
                                                                        this,
                                                                        &user_learning_store_,
                                                                        &review_history_store_);
-        categorization_dialog->show_results(results,
+        if (!rule_mode) {
+            categorization_dialog->set_integrity_report(std::move(integrity_report));
+        }
+        categorization_dialog->show_results(review_results,
                                             get_folder_path(),
                                             settings.get_include_subdirectories(),
                                             settings.get_offer_rename_images(),
