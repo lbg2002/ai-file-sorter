@@ -891,7 +891,7 @@ bool CategorizationDialog::validate_integrity_before_apply()
         integrity_snapshot_,
         selected_integrity_results(),
         integrity_base_dir_.empty() ? base_dir_ : integrity_base_dir_,
-        integrity_use_subcategories_);
+        show_subcategory_column);
 
     if (!report.has_blocking_issues()) {
         return true;
