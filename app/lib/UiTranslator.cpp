@@ -217,8 +217,13 @@ void UiTranslator::translate_primary_controls(bool analysis_in_progress) const
         radio->setToolTip(tr("Organize files with deterministic rules without calling an AI model."));
     }
     if (auto* button = raw_ptr(deps_.primary.ai_model_button)) {
-        button->setText(tr("AI model…"));
-        button->setToolTip(tr("Choose or configure the AI model used for folder organization."));
+        const auto* rule_radio = raw_ptr(deps_.primary.organization_mode_rules_radio);
+        const bool rule_mode = rule_radio && rule_radio->isChecked();
+        button->setText(rule_mode ? tr("Edit rules…") : tr("AI model…"));
+        button->setToolTip(
+            rule_mode
+                ? tr("Open the deterministic rule editor used by Rule mode.")
+                : tr("Choose or configure the AI model used for folder organization."));
     }
     if (auto* heading = raw_ptr(deps_.primary.categorization_style_heading)) {
         heading->setText(tr("Categorization type"));
@@ -306,7 +311,7 @@ void UiTranslator::translate_primary_controls(bool analysis_in_progress) const
         button->setToolTip(tr("Show or hide document analysis options"));
     }
     if (auto* button = raw_ptr(deps_.primary.analyze_button)) {
-        button->setText(analysis_in_progress ? tr("Stop analyzing") : tr("Analyze folder"));
+        button->setText(analysis_in_progress ? tr("Stop analyzing") : tr("Generate preview"));
     }
 }
 
