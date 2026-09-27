@@ -314,8 +314,11 @@ BatchFolderCategorizationResult BatchFolderCategorizer::parse_response(
 
 int BatchFolderCategorizer::recommended_max_output_tokens(std::size_t item_count)
 {
-    const std::size_t estimate = 768 + item_count * 72;
-    return static_cast<int>(std::clamp<std::size_t>(estimate, 2048, 32768));
+    // Reasoning-capable OpenAI-compatible models can consume part of the completion
+    // budget before emitting their final JSON. Keep a generous floor so a valid
+    // final answer is not truncated before message.content is produced.
+    const std::size_t estimate = 1536 + item_count * 96;
+    return static_cast<int>(std::clamp<std::size_t>(estimate, 8192, 32768));
 }
 
 BatchFolderCategorizationResult BatchFolderCategorizer::categorize(
