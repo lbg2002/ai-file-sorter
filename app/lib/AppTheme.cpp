@@ -538,6 +538,33 @@ QString main_window_style_sheet(const QPalette& palette)
             spacing: 7px;
             padding: 2px 1px;
         }
+        QWidget#aifsModeSelector {
+            background: transparent;
+        }
+        QRadioButton#aifsModeChoice {
+            background-color: %5;
+            color: %4;
+            border: 1px solid %6;
+            border-radius: 9px;
+            padding: 8px 14px;
+            spacing: 0;
+            font-weight: 600;
+        }
+        QRadioButton#aifsModeChoice:hover {
+            background-color: %11;
+            border-color: %12;
+        }
+        QRadioButton#aifsModeChoice:checked {
+            background-color: %7;
+            color: %8;
+            border-color: %18;
+            font-weight: 700;
+        }
+        QRadioButton#aifsModeChoice::indicator {
+            width: 0px;
+            height: 0px;
+            margin: 0px;
+        }
         QCheckBox::indicator,
         QRadioButton::indicator {
             width: 17px;
