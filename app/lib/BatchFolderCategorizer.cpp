@@ -142,6 +142,11 @@ std::string constraints_text(const BatchFolderCategorizationOptions& options)
         for (const auto& category : options.allowed_categories) {
             out << "- " << category << "\n";
         }
+        out << "A category whitelist is active, so do not invent new main-category labels outside it.\n";
+    } else {
+        out << "No category whitelist is active. Reuse a sensible existing category when it fits, "
+               "but you may propose a new category or subcategory when no suitable destination exists. "
+               "A new label means the application may create that folder only after the user reviews and approves the plan.\n";
     }
 
     if (!options.allowed_subcategories_by_category.empty()) {
