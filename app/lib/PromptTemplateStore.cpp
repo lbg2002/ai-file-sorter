@@ -98,7 +98,9 @@ std::string PromptTemplateStore::default_template()
         "3. category and subcategory are directory labels, not paths. Do not use /, \\, . or .. as path components.\n"
         "4. suggested_name is optional. If used, it must be a filename only, never a path.\n"
         "5. Base categorization on the whole folder context so related files use coherent categories.\n"
-        "6. Do not wrap the JSON in Markdown fences or add explanation.";
+        "6. If no whitelist forbids it and no suitable destination folder exists, you may propose a new category/subcategory label. "
+        "The application will create that folder only after the user reviews and approves the plan.\n"
+        "7. Do not wrap the JSON in Markdown fences or add explanation.";
 }
 
 bool PromptTemplateStore::save()
