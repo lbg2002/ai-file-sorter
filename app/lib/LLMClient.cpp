@@ -470,7 +470,6 @@ std::string LLMClient::make_generic_payload(const std::string& system_prompt,
     if (max_tokens > 0) {
         payload << ",\"max_tokens\": " << max_tokens;
     }
-    payload << ",\"temperature\": 0.1";
     payload << "}";
     return payload.str();
 }
