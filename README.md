@@ -26,6 +26,12 @@ Before the review plan is applied, FileSort Guard checks the proposal against th
 
 ## Added in this fork
 
+### Interface language
+
+The application includes runtime UI translation. Open **Settings → Interface language** and choose **Simplified Chinese** for the Chinese interface, or **English** to switch back. The selection is saved immediately.
+
+This is separate from **Settings → Category language**, which controls the language of AI-generated category labels.
+
 ### 1. Visual prompt editor
 
 Open **Settings → Edit AI Prompt…**.
