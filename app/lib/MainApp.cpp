@@ -30,6 +30,12 @@
 #include "CategoryLanguage.hpp"
 #include "CategoryLanguageSupport.hpp"
 #include "MainAppUiBuilder.hpp"
+#include "PromptEditorDialog.hpp"
+#include "PromptTemplateStore.hpp"
+#include "ResultIntegrityValidator.hpp"
+#include "RuleEditorDialog.hpp"
+#include "RuleEngine.hpp"
+#include "FileScanner.hpp"
 #include "MenuMnemonicController.hpp"
 #include "ReviewHistoryDialog.hpp"
 #include "SuitabilityBenchmarkDialog.hpp"
@@ -621,6 +627,8 @@ MainApp::MainApp(Settings& settings,
       development_prompt_logging_enabled_(development_mode ? settings.get_development_prompt_logging() : false),
       main_window_state_binder_(std::make_unique<MainWindowStateBinder>(*this))
 {
+    PromptTemplateStore::initialize(runtime_data_dir_);
+    RuleStore::initialize(runtime_data_dir_);
     rebuild_storage_provider_registry();
     progress_controller_.set_show_vision_diagnostics(is_development_mode() || is_test_mode());
     TranslationManager::instance().initialize_for_app(qApp, settings.get_language());
@@ -1315,6 +1323,11 @@ QString MainApp::current_backend_status_text() const
             break;
     }
 
+    if (organization_mode_rules_radio && organization_mode_rules_radio->isChecked()) {
+        run_rule_mode();
+        return;
+    }
+
     if (!using_local_llm) {
         return tr("Loaded backend: Remote API");
     }
@@ -1592,6 +1605,57 @@ void MainApp::on_analyze_clicked()
     }
 }
 
+
+void MainApp::show_prompt_editor()
+{
+    PromptEditorDialog dialog(this);
+    dialog.exec();
+}
+
+void MainApp::show_rule_editor()
+{
+    RuleEditorDialog dialog(this);
+    dialog.exec();
+}
+
+void MainApp::run_rule_mode()
+{
+    const std::string folder_path = get_folder_path();
+    const auto rules = RuleStore::load();
+    if (rules.empty()) {
+        QMessageBox::information(this,
+                                 tr("Rule mode"),
+                                 tr("No rules are configured. Add at least one rule from Settings -> Manage File Rules."));
+        return;
+    }
+
+    FileScanner scanner;
+    std::vector<FileEntry> snapshot;
+    try {
+        snapshot = scanner.get_directory_entries(folder_path, effective_scan_options());
+    } catch (const std::exception& ex) {
+        show_error_dialog(fmt::format("Could not scan folder for rule mode: {}", ex.what()));
+        return;
+    }
+
+    std::vector<CategorizedFile> results;
+    results.reserve(snapshot.size());
+    for (const auto& entry : snapshot) {
+        if (auto result = RuleEngine::apply_first(entry, rules)) {
+            results.push_back(std::move(*result));
+        }
+    }
+
+    if (results.empty()) {
+        QMessageBox::information(this,
+                                 tr("Rule mode"),
+                                 tr("No scanned items matched the configured rules. No files were changed."));
+        return;
+    }
+
+    populate_tree_view(results);
+    show_results_dialog(results);
+}
 
 void MainApp::on_directory_selected(const QString& path, bool user_initiated)
 {
