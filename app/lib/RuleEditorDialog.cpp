@@ -22,7 +22,7 @@ RuleEditorDialog::RuleEditorDialog(QWidget* parent)
 
     auto* layout = new QVBoxLayout(this);
     auto* help = new QLabel(
-        rule_editor_tr("Rules run top-to-bottom; the first match wins. Fields: extension, filename, path, size. "
+        tr("Rules run top-to-bottom; the first match wins. Fields: extension, filename, path, size. "
            "Operators: equals, contains, regex, startswith, endswith, >, <. Example: extension / equals / .pdf / Documents / PDF."),
         this);
     help->setWordWrap(true);
@@ -30,15 +30,15 @@ RuleEditorDialog::RuleEditorDialog(QWidget* parent)
 
     table_ = new QTableWidget(0, 6, this);
     table_->setHorizontalHeaderLabels({
-        rule_editor_tr("Enabled"), rule_editor_tr("Field"), rule_editor_tr("Operator"), rule_editor_tr("Value"), rule_editor_tr("Category"), rule_editor_tr("Subcategory")
+        tr("Enabled"), tr("Field"), tr("Operator"), tr("Value"), tr("Category"), tr("Subcategory")
     });
     table_->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     table_->setSelectionBehavior(QAbstractItemView::SelectRows);
     layout->addWidget(table_, 1);
 
     auto* row_actions = new QHBoxLayout();
-    auto* add = new QPushButton(rule_editor_tr("Add rule"), this);
-    auto* remove = new QPushButton(rule_editor_tr("Remove selected"), this);
+    auto* add = new QPushButton(tr("Add rule"), this);
+    auto* remove = new QPushButton(tr("Remove selected"), this);
     row_actions->addWidget(add);
     row_actions->addWidget(remove);
     row_actions->addStretch(1);
@@ -122,7 +122,7 @@ void RuleEditorDialog::save_rules()
     }
 
     if (!RuleStore::save(rules)) {
-        status_label_->setText(rule_editor_tr("Could not save rules."));
+        status_label_->setText(tr("Could not save rules."));
         return;
     }
     accept();
