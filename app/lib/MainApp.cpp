@@ -1553,8 +1553,20 @@ void MainApp::on_analyze_clicked()
         return;
     }
 
-    if (organization_mode_rules_radio && organization_mode_rules_radio->isChecked()) {
+    const bool rule_mode =
+        organization_mode_rules_radio && organization_mode_rules_radio->isChecked();
+    const bool ai_mode =
+        organization_mode_ai_radio && organization_mode_ai_radio->isChecked();
+
+    if (rule_mode) {
         run_rule_mode();
+        return;
+    }
+    if (!ai_mode) {
+        QMessageBox::warning(
+            this,
+            tr("Organization mode"),
+            tr("No organization mode is selected. Choose AI mode or Rule mode before generating a preview."));
         return;
     }
 
