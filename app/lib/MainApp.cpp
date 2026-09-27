@@ -1322,11 +1322,6 @@ QString MainApp::current_backend_status_text() const
             break;
     }
 
-    if (organization_mode_rules_radio && organization_mode_rules_radio->isChecked()) {
-        run_rule_mode();
-        return;
-    }
-
     if (!using_local_llm) {
         return tr("Loaded backend: Remote API");
     }
@@ -1549,6 +1544,11 @@ void MainApp::on_analyze_clicked()
     if (!Utils::is_valid_directory(folder_path.c_str())) {
         show_error_dialog(ERR_INVALID_PATH);
         core_logger->warn("User supplied invalid directory '{}'", folder_path);
+        return;
+    }
+
+    if (organization_mode_rules_radio && organization_mode_rules_radio->isChecked()) {
+        run_rule_mode();
         return;
     }
 
