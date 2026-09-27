@@ -18,8 +18,11 @@
 #include <iostream>
 #include <sstream>
 #include <algorithm>
+#include <array>
 #include <cctype>
+#include <chrono>
 #include <string>
+#include <thread>
 #include <utility>
 
 // Helper function to write the response from curl into a string
@@ -59,7 +62,7 @@ long resolve_custom_timeout_seconds() {
             return value;
         }
     }
-    return 120L;
+    return 300L;
 }
 
 long resolve_openai_timeout_seconds() {
@@ -101,6 +104,7 @@ bool ends_with(const std::string& value, const std::string& suffix) {
 struct CurlRequest {
     CURL* handle{nullptr};
     curl_slist* headers{nullptr};
+    std::array<char, CURL_ERROR_SIZE> error_buffer{};
 
     CurlRequest() = default;
     CurlRequest(const CurlRequest&) = delete;
@@ -195,7 +199,15 @@ void configure_request_payload(CurlRequest& request,
 {
     curl_easy_setopt(request.handle, CURLOPT_URL, api_url.c_str());
     curl_easy_setopt(request.handle, CURLOPT_POST, 1L);
+    curl_easy_setopt(request.handle, CURLOPT_CONNECTTIMEOUT, 15L);
     curl_easy_setopt(request.handle, CURLOPT_TIMEOUT, timeout_seconds);
+    curl_easy_setopt(request.handle, CURLOPT_NOSIGNAL, 1L);
+    curl_easy_setopt(request.handle, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+    curl_easy_setopt(request.handle, CURLOPT_TCP_KEEPALIVE, 1L);
+    curl_easy_setopt(request.handle, CURLOPT_TCP_KEEPIDLE, 30L);
+    curl_easy_setopt(request.handle, CURLOPT_TCP_KEEPINTVL, 15L);
+    request.error_buffer.fill('\0');
+    curl_easy_setopt(request.handle, CURLOPT_ERRORBUFFER, request.error_buffer.data());
 
     request.headers = curl_slist_append(request.headers, "Content-Type: application/json");
     if (!api_key.empty()) {
@@ -211,21 +223,60 @@ void configure_request_payload(CurlRequest& request,
     curl_easy_setopt(request.handle, CURLOPT_HEADERDATA, &retry_after_header);
 }
 
+bool retryable_transport_error(CURLcode code)
+{
+    return code == CURLE_RECV_ERROR ||
+           code == CURLE_SEND_ERROR ||
+           code == CURLE_GOT_NOTHING ||
+           code == CURLE_PARTIAL_FILE;
+}
+
 HttpResponseInfo perform_request(CurlRequest& request,
-                                 std::string retry_after_header,
+                                 std::string& response_buffer,
+                                 std::string& retry_after_header,
                                  const std::shared_ptr<spdlog::logger>& logger)
 {
-    const CURLcode res = curl_easy_perform(request.handle);
-    if (res != CURLE_OK) {
-        if (logger) {
-            logger->error("cURL request failed: {}", curl_easy_strerror(res));
+    constexpr int kMaxAttempts = 2;
+    for (int attempt = 1; attempt <= kMaxAttempts; ++attempt) {
+        request.error_buffer.fill('\0');
+        const CURLcode res = curl_easy_perform(request.handle);
+        if (res == CURLE_OK) {
+            long http_code = 0;
+            curl_easy_getinfo(request.handle, CURLINFO_RESPONSE_CODE, &http_code);
+            return HttpResponseInfo{http_code, retry_after_header};
         }
-        throw std::runtime_error("Network Error: " + std::string(curl_easy_strerror(res)));
+
+        const std::string detail = request.error_buffer[0] != '\0'
+            ? std::string(request.error_buffer.data())
+            : std::string(curl_easy_strerror(res));
+
+        if (logger) {
+            logger->error("cURL request attempt {}/{} failed: {}",
+                          attempt,
+                          kMaxAttempts,
+                          detail);
+        }
+
+        if (attempt < kMaxAttempts && retryable_transport_error(res)) {
+            if (logger) {
+                logger->warn("Retrying transient remote LLM transport failure once.");
+            }
+            response_buffer.clear();
+            retry_after_header.clear();
+            std::this_thread::sleep_for(std::chrono::milliseconds(350));
+            continue;
+        }
+
+        std::string message = "Network Error: " + detail;
+        if (res == CURLE_RECV_ERROR || res == CURLE_GOT_NOTHING) {
+            message +=
+                ". The model server closed the connection before a complete response was received. "
+                "Check the model server/reverse-proxy logs, available memory, and request timeout.";
+        }
+        throw std::runtime_error(message);
     }
 
-    long http_code = 0;
-    curl_easy_getinfo(request.handle, CURLINFO_RESPONSE_CODE, &http_code);
-    return HttpResponseInfo{http_code, std::move(retry_after_header)};
+    throw std::runtime_error("Network Error: remote request failed.");
 }
 
 std::string parse_category_response(const std::string& payload,
@@ -334,7 +385,8 @@ std::string LLMClient::send_api_request(std::string json_payload) {
                               response_string,
                               retry_after_header);
 
-    const HttpResponseInfo response = perform_request(request, std::move(retry_after_header), logger);
+    const HttpResponseInfo response =
+        perform_request(request, response_string, retry_after_header, logger);
     if (response.status_code >= 400) {
         RemoteApiError::throw_for_http_error("Remote LLM",
                                              response.status_code,
