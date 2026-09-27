@@ -10,7 +10,10 @@ public:
     /**
      * @brief Create an OpenAI-compatible client, optionally targeting a custom base URL.
      */
-    LLMClient(std::string api_key, std::string model, std::string base_url = std::string());
+    LLMClient(std::string api_key,
+              std::string model,
+              std::string base_url = std::string(),
+              long timeout_override_seconds = 0);
     ~LLMClient() override;
     std::string categorize_file(const std::string& file_name,
                                 const std::string& file_path,
@@ -39,6 +42,7 @@ private:
     std::string last_prompt;
     std::string model;
     std::string base_url;
+    long timeout_override_seconds_{0};
 };
 
 #endif
