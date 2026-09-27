@@ -1,4 +1,5 @@
 #include "LLMSelectionDialog.hpp"
+#include "AppTheme.hpp"
 
 #include "AppIconResources.hpp"
 #include "DialogUtils.hpp"
@@ -152,6 +153,8 @@ LLMSelectionDialog::LLMSelectionDialog(Settings& settings, QWidget* parent)
     , model_storage_dir_(settings.get_llm_storage_dir())
     , original_model_storage_dir_(settings.get_llm_storage_dir())
 {
+    setObjectName(QStringLiteral("fileSortGuardUtilityDialog"));
+    setStyleSheet(AppTheme::utility_dialog_style_sheet(palette()));
     apply_model_storage_dir_override();
 
     QIcon icon = QApplication::windowIcon();
