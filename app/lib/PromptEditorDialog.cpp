@@ -21,14 +21,14 @@ PromptEditorDialog::PromptEditorDialog(QWidget* parent)
 
     auto* layout = new QVBoxLayout(this);
     auto* description = new QLabel(
-        prompt_editor_tr("Edit the prompt used for one-request folder AI organization. "
+        tr("Edit the prompt used for one-request folder AI organization. "
            "Supported variables: {{folder_path}}, {{inventory_json}}, {{recursive}}, "
            "{{item_count}}, {{category_language}}, {{context}}, {{output_schema}}. "
            "The model receives the whole selected folder inventory in one request."), this);
     description->setWordWrap(true);
     layout->addWidget(description);
 
-    enabled_checkbox_ = new QCheckBox(prompt_editor_tr("Enable custom prompt override"), this);
+    enabled_checkbox_ = new QCheckBox(tr("Enable custom prompt override"), this);
     enabled_checkbox_->setChecked(PromptTemplateStore::enabled());
     layout->addWidget(enabled_checkbox_);
 
@@ -42,8 +42,8 @@ PromptEditorDialog::PromptEditorDialog(QWidget* parent)
     layout->addWidget(status_label_);
 
     auto* buttons = new QDialogButtonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel, this);
-    auto* restore = buttons->addButton(prompt_editor_tr("Restore default"), QDialogButtonBox::ResetRole);
-    auto* preview = buttons->addButton(prompt_editor_tr("Preview rendered prompt"), QDialogButtonBox::ActionRole);
+    auto* restore = buttons->addButton(tr("Restore default"), QDialogButtonBox::ResetRole);
+    auto* preview = buttons->addButton(tr("Preview rendered prompt"), QDialogButtonBox::ActionRole);
     layout->addWidget(buttons);
 
     connect(buttons, &QDialogButtonBox::accepted, this, [this]() { save_prompt(); });
@@ -57,7 +57,7 @@ void PromptEditorDialog::save_prompt()
     PromptTemplateStore::set_enabled(enabled_checkbox_->isChecked());
     PromptTemplateStore::set_prompt_template(editor_->toPlainText().toStdString());
     if (!PromptTemplateStore::save()) {
-        status_label_->setText(prompt_editor_tr("Could not save the prompt override."));
+        status_label_->setText(tr("Could not save the prompt override."));
         return;
     }
     accept();
@@ -87,5 +87,5 @@ void PromptEditorDialog::show_preview()
     PromptTemplateStore::set_prompt_template(previous);
     PromptTemplateStore::set_enabled(was_enabled);
 
-    QMessageBox::information(this, prompt_editor_tr("Rendered prompt preview"), QString::fromStdString(rendered));
+    QMessageBox::information(this, tr("Rendered prompt preview"), QString::fromStdString(rendered));
 }
