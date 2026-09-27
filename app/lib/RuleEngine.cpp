@@ -39,6 +39,9 @@ std::vector<std::string> split_tab(const std::string& line)
     while (std::getline(ss, part, '\t')) {
         parts.push_back(part);
     }
+    if (!line.empty() && line.back() == '\t') {
+        parts.emplace_back();
+    }
     return parts;
 }
 
