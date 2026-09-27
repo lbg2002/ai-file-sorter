@@ -152,3 +152,42 @@ TEST_CASE("Batch prompt permits safe new category folders without a whitelist")
     REQUIRE(prompt.find("Existing folders under the selected root") != std::string::npos);
     REQUIRE(prompt.find("Meetings/2026") != std::string::npos);
 }
+
+
+TEST_CASE("Folder batch categorization retries once when the first reply is not JSON")
+{
+    class RepairClient final : public ILLMClient {
+    public:
+        int calls{0};
+        std::string categorize_file(const std::string&, const std::string&, FileType, const std::string&) override
+        {
+            return {};
+        }
+        std::string complete_prompt(const std::string&, int) override
+        {
+            ++calls;
+            if (calls == 1) {
+                return "I will organize these files for you.";
+            }
+            return R"({"items":[{"id":0,"category":"Documents","subcategory":"Text","suggested_name":""}]})";
+        }
+        void set_prompt_logging_enabled(bool) override {}
+    };
+
+    TempDir temp;
+    const auto root = temp.path();
+    std::vector<FileEntry> entries{
+        {(root / "a.txt").string(), "a.txt", FileType::File},
+    };
+
+    BatchFolderCategorizationOptions options;
+    options.folder_path = root.string();
+
+    RepairClient client;
+    BatchFolderCategorizer categorizer;
+    const auto result = categorizer.categorize(client, entries, options);
+
+    REQUIRE(client.calls == 2);
+    REQUIRE(result.files.size() == 1);
+    REQUIRE(result.files.front().category == "Documents");
+}
