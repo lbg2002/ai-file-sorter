@@ -35,7 +35,6 @@
 #include "ResultIntegrityValidator.hpp"
 #include "RuleEditorDialog.hpp"
 #include "RuleEngine.hpp"
-#include "FileScanner.hpp"
 #include "MenuMnemonicController.hpp"
 #include "ReviewHistoryDialog.hpp"
 #include "SuitabilityBenchmarkDialog.hpp"
@@ -1629,10 +1628,9 @@ void MainApp::run_rule_mode()
         return;
     }
 
-    FileScanner scanner;
     std::vector<FileEntry> snapshot;
     try {
-        snapshot = scanner.get_directory_entries(folder_path, effective_scan_options());
+        snapshot = results_coordinator.list_directory(folder_path, effective_scan_options());
     } catch (const std::exception& ex) {
         show_error_dialog(fmt::format("Could not scan folder for rule mode: {}", ex.what()));
         return;
@@ -3565,8 +3563,8 @@ void MainApp::show_results_dialog(const std::vector<CategorizedFile>& results)
         ResultIntegrityReport integrity_report;
 
         if (!rule_mode) {
-            FileScanner scanner;
-            const auto snapshot = scanner.get_directory_entries(get_folder_path(), effective_scan_options());
+            const auto snapshot = results_coordinator.list_directory(
+                get_folder_path(), effective_scan_options());
             integrity_report = ResultIntegrityValidator::validate(
                 snapshot, results, get_folder_path(), show_subcategory);
 
