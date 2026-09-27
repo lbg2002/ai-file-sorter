@@ -245,6 +245,16 @@ void CategorizationDialog::set_integrity_report(ResultIntegrityReport report)
     update_integrity_summary();
 }
 
+void CategorizationDialog::set_integrity_context(std::vector<FileEntry> snapshot,
+                                                 std::string base_dir,
+                                                 bool use_subcategories)
+{
+    integrity_snapshot_ = std::move(snapshot);
+    integrity_base_dir_ = std::move(base_dir);
+    integrity_use_subcategories_ = use_subcategories;
+    integrity_context_enabled_ = true;
+}
+
 void CategorizationDialog::show_results(const std::vector<CategorizedFile>& files,
                                         const std::string& base_dir_override,
                                         bool include_subdirectories,
@@ -709,7 +719,8 @@ void CategorizationDialog::update_integrity_summary()
     const int missing = integrity_report_.count(IntegrityIssueKind::MissingSource);
     const int unknown = integrity_report_.count(IntegrityIssueKind::UnknownSource);
     const int conflicts = integrity_report_.count(IntegrityIssueKind::TargetConflict);
-    const int total = duplicates + missing + unknown + conflicts;
+    const int unsafe = integrity_report_.count(IntegrityIssueKind::UnsafeTarget);
+    const int total = duplicates + missing + unknown + conflicts + unsafe;
 
     if (total == 0) {
         integrity_summary_label->setVisible(false);
@@ -722,18 +733,20 @@ void CategorizationDialog::update_integrity_summary()
     integrity_summary_label->setVisible(true);
     integrity_summary_label->setText(
         tr("Safety check: %1 duplicate source(s), %2 missing item(s), %3 unknown source(s), "
-           "%4 destination conflict(s). Missing items remain in their original location. "
-           "Duplicate, unknown, or destination-conflict rows must be resolved before processing.")
+           "%4 destination conflict(s), %5 unsafe target(s). Missing items remain in their original location. "
+           "Problem rows are deselected by default; edit/reselect them only after fixing the issue.")
             .arg(duplicates)
             .arg(missing)
             .arg(unknown)
-            .arg(conflicts));
+            .arg(conflicts)
+            .arg(unsafe));
 
     const auto priority = [](IntegrityIssueKind kind) {
         switch (kind) {
         case IntegrityIssueKind::UnknownSource: return 4;
         case IntegrityIssueKind::DuplicateSource: return 3;
         case IntegrityIssueKind::TargetConflict: return 2;
+        case IntegrityIssueKind::UnsafeTarget: return 5;
         case IntegrityIssueKind::MissingSource: return 1;
         }
         return 0;
@@ -784,6 +797,10 @@ void CategorizationDialog::update_integrity_summary()
             background = QColor(255, 228, 230);
             status = tr("Destination conflict");
             break;
+        case IntegrityIssueKind::UnsafeTarget:
+            background = QColor(255, 218, 185);
+            status = tr("Unsafe target");
+            break;
         }
 
         for (int column = 0; column < model->columnCount(); ++column) {
@@ -795,7 +812,7 @@ void CategorizationDialog::update_integrity_summary()
         }
         if (auto* select_item = model->item(row, ColumnSelect)) {
             select_item->setCheckState(Qt::Unchecked);
-            select_item->setEnabled(false);
+            select_item->setEnabled(true);
         }
         if (auto* status_item = model->item(row, ColumnStatus)) {
             status_item->setText(status);
@@ -803,15 +820,102 @@ void CategorizationDialog::update_integrity_summary()
     }
 
     if (confirm_button) {
-        confirm_button->setEnabled(!integrity_report_.has_blocking_issues());
-        if (integrity_report_.has_blocking_issues()) {
-            confirm_button->setToolTip(
-                tr("Processing is disabled while blocking safety anomalies are present."));
-        } else {
-            confirm_button->setToolTip(QString());
-        }
+        confirm_button->setEnabled(true);
+        confirm_button->setToolTip(
+            tr("A final safety check runs against the filesystem snapshot before any selected operation is applied."));
     }
     update_select_all_state();
+}
+
+std::vector<CategorizedFile> CategorizationDialog::selected_integrity_results() const
+{
+    std::vector<CategorizedFile> selected;
+    if (!model) {
+        return selected;
+    }
+
+    selected.reserve(static_cast<std::size_t>(model->rowCount()));
+    for (int row = 0; row < model->rowCount(); ++row) {
+        auto* select_item = model->item(row, ColumnSelect);
+        if (select_item && select_item->checkState() != Qt::Checked) {
+            continue;
+        }
+
+        auto* file_item = model->item(row, ColumnFile);
+        auto* category_item = model->item(row, ColumnCategory);
+        auto* subcategory_item = model->item(row, ColumnSubcategory);
+        auto* rename_item = model->item(row, ColumnSuggestedName);
+        if (!file_item || !category_item) {
+            continue;
+        }
+
+        bool rename_only = false;
+        bool used_consistency_hints = false;
+        FileType file_type = FileType::File;
+        if (!resolve_row_flags(row, rename_only, used_consistency_hints, file_type)) {
+            continue;
+        }
+
+        std::string source_dir = file_item->data(kFilePathRole).toString().toStdString();
+        if (source_dir.empty()) {
+            source_dir = base_dir_;
+        }
+
+        CategorizedFile file{
+            source_dir,
+            file_item->text().toStdString(),
+            file_type,
+            read_item_or_hidden_text(category_item, kHiddenCategoryRole),
+            subcategory_item
+                ? read_item_or_hidden_text(subcategory_item, kHiddenSubcategoryRole)
+                : std::string(),
+            0
+        };
+        file.rename_only = rename_only;
+        file.used_consistency_hints = used_consistency_hints;
+        if (rename_item) {
+            file.suggested_name = rename_item->text().toStdString();
+        }
+        selected.push_back(std::move(file));
+    }
+    return selected;
+}
+
+bool CategorizationDialog::validate_integrity_before_apply()
+{
+    if (!integrity_context_enabled_) {
+        return true;
+    }
+
+    const auto report = ResultIntegrityValidator::validate(
+        integrity_snapshot_,
+        selected_integrity_results(),
+        integrity_base_dir_.empty() ? base_dir_ : integrity_base_dir_,
+        integrity_use_subcategories_);
+
+    if (!report.has_blocking_issues()) {
+        return true;
+    }
+
+    const int duplicates = report.count(IntegrityIssueKind::DuplicateSource);
+    const int unknown = report.count(IntegrityIssueKind::UnknownSource);
+    const int conflicts = report.count(IntegrityIssueKind::TargetConflict);
+    const int unsafe = report.count(IntegrityIssueKind::UnsafeTarget);
+
+    QMessageBox::warning(
+        this,
+        tr("Safety check blocked processing"),
+        tr("The selected operations still contain unsafe AI output:\n"
+           "Duplicate sources: %1\n"
+           "Unknown sources: %2\n"
+           "Destination conflicts: %3\n"
+           "Unsafe targets: %4\n\n"
+           "Edit the affected category/name, or deselect one side of a duplicate/conflict, then try again.")
+            .arg(duplicates)
+            .arg(unknown)
+            .arg(conflicts)
+            .arg(unsafe));
+    return false;
 }
 
 void CategorizationDialog::populate_model()
@@ -1178,6 +1282,10 @@ void CategorizationDialog::record_categorization_to_db(bool learn_approved_mappi
 
 void CategorizationDialog::on_confirm_and_sort_button_clicked()
 {
+    if (!validate_integrity_before_apply()) {
+        return;
+    }
+
     const bool dry_run = dry_run_checkbox && dry_run_checkbox->isChecked();
     record_categorization_to_db(!dry_run);
 
