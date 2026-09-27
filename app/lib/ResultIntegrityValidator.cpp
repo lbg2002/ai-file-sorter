@@ -3,6 +3,7 @@
 #include "Utils.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <filesystem>
 #include <unordered_map>
 #include <unordered_set>
