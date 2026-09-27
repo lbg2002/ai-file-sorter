@@ -66,6 +66,7 @@
 #include <chrono>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 
 namespace {
 
@@ -788,6 +789,7 @@ void CategorizationDialog::update_integrity_summary()
         for (int column = 0; column < model->columnCount(); ++column) {
             if (auto* item = model->item(row, column)) {
                 item->setBackground(background);
+                item->setForeground(QColor(32, 32, 32));
                 item->setToolTip(QString::fromStdString(selected->message));
             }
         }
