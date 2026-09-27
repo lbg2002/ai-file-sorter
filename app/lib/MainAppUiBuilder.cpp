@@ -347,18 +347,29 @@ void MainAppUiBuilder::build_central_panel(MainApp& app) {
     app.resize(1000, 800);
 
     QWidget* central = new QWidget(&app);
+    central->setObjectName(QStringLiteral("aifsMainSurface"));
     auto* main_layout = new QVBoxLayout(central);
-    main_layout->setContentsMargins(12, 12, 12, 12);
-    main_layout->setSpacing(8);
+    main_layout->setContentsMargins(18, 18, 18, 18);
+    main_layout->setSpacing(12);
 
-    auto* path_layout = new QHBoxLayout();
+    auto* path_card = new QFrame(central);
+    path_card->setObjectName(QStringLiteral("aifsCard"));
+    auto* path_layout = new QHBoxLayout(path_card);
+    path_layout->setContentsMargins(14, 12, 14, 12);
+    path_layout->setSpacing(10);
     app.path_label = new QLabel(central);
     app.path_entry = new QLineEdit(central);
     app.browse_button = new QPushButton(central);
     path_layout->addWidget(app.path_label);
     path_layout->addWidget(app.path_entry, 1);
     path_layout->addWidget(app.browse_button);
-    main_layout->addLayout(path_layout);
+    main_layout->addWidget(path_card);
+
+    auto* scan_card = new QFrame(central);
+    scan_card->setObjectName(QStringLiteral("aifsCard"));
+    auto* scan_card_layout = new QVBoxLayout(scan_card);
+    scan_card_layout->setContentsMargins(14, 12, 14, 12);
+    scan_card_layout->setSpacing(8);
 
     auto* options_layout = new QHBoxLayout();
     app.use_subcategories_checkbox = new QCheckBox(central);
@@ -371,7 +382,7 @@ void MainAppUiBuilder::build_central_panel(MainApp& app) {
     options_layout->addWidget(app.categorize_directories_checkbox);
     options_layout->addWidget(app.include_subdirectories_checkbox);
     options_layout->addStretch(1);
-    main_layout->addLayout(options_layout);
+    scan_card_layout->addLayout(options_layout);
 
     auto* document_options_layout = new QVBoxLayout();
     document_options_layout->setContentsMargins(0, 0, 0, 0);
@@ -401,7 +412,7 @@ void MainAppUiBuilder::build_central_panel(MainApp& app) {
     document_rename_layout->addWidget(app.add_document_date_to_category_checkbox);
     app.document_options_container->setVisible(false);
     document_options_layout->addWidget(app.document_options_container);
-    main_layout->addLayout(document_options_layout);
+    scan_card_layout->addLayout(document_options_layout);
 
     auto* image_options_layout = new QVBoxLayout();
     image_options_layout->setContentsMargins(0, 0, 0, 0);
@@ -433,22 +444,26 @@ void MainAppUiBuilder::build_central_panel(MainApp& app) {
     image_rename_layout->addWidget(app.rename_images_only_checkbox);
     app.image_options_container->setVisible(false);
     image_options_layout->addWidget(app.image_options_container);
-    main_layout->addLayout(image_options_layout);
+    scan_card_layout->addLayout(image_options_layout);
 
     app.add_audio_video_metadata_to_filename_checkbox = new QCheckBox(central);
     auto* audio_video_row = new QHBoxLayout();
     audio_video_row->setContentsMargins(0, 0, 0, 0);
     audio_video_row->addWidget(app.add_audio_video_metadata_to_filename_checkbox);
     audio_video_row->addStretch(1);
-    main_layout->addLayout(audio_video_row);
+    scan_card_layout->addLayout(audio_video_row);
+    main_layout->addWidget(scan_card);
 
     app.organization_mode_heading = new QLabel(QObject::tr("Organization mode"), central);
+    app.organization_mode_heading->setObjectName(QStringLiteral("aifsSectionTitle"));
     app.organization_mode_ai_radio = new QRadioButton(QObject::tr("AI mode (one request per folder)"), central);
     app.organization_mode_rules_radio = new QRadioButton(QObject::tr("Rule mode"), central);
     app.ai_model_button = new QPushButton(QObject::tr("AI model…"), central);
+    app.ai_model_button->setObjectName(QStringLiteral("aifsSecondaryButton"));
     app.organization_mode_ai_radio->setChecked(true);
 
     app.categorization_style_heading = new QLabel(central);
+    app.categorization_style_heading->setObjectName(QStringLiteral("aifsSectionTitle"));
     app.categorization_style_refined_radio = new QRadioButton(central);
     app.categorization_style_consistent_radio = new QRadioButton(central);
     app.use_whitelist_checkbox = new QCheckBox(central);
@@ -467,6 +482,7 @@ void MainAppUiBuilder::build_central_panel(MainApp& app) {
     if (analyze_icon.isNull()) {
         analyze_icon = app.style()->standardIcon(QStyle::SP_MediaPlay);
     }
+    app.analyze_button->setObjectName(QStringLiteral("aifsPrimaryButton"));
     app.analyze_button->setIcon(analyze_icon);
     app.analyze_button->setIconSize(QSize(20, 20));
     app.analyze_button->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
@@ -514,7 +530,13 @@ void MainAppUiBuilder::build_central_panel(MainApp& app) {
     analyze_layout->addLayout(control_block);
     analyze_layout->addSpacing(12);
     analyze_layout->addWidget(app.analyze_button, 0, Qt::AlignBottom | Qt::AlignRight);
-    main_layout->addLayout(analyze_layout);
+
+    auto* organization_card = new QFrame(central);
+    organization_card->setObjectName(QStringLiteral("aifsCard"));
+    auto* organization_card_layout = new QVBoxLayout(organization_card);
+    organization_card_layout->setContentsMargins(14, 12, 14, 12);
+    organization_card_layout->addLayout(analyze_layout);
+    main_layout->addWidget(organization_card);
 
     app.tree_model = new QStandardItemModel(0, 5, &app);
 
