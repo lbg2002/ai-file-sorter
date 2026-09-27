@@ -1,6 +1,7 @@
 #include "LocalLLMPromptBuilder.hpp"
 
 #include "FileCategoryPolicy.hpp"
+#include "PromptTemplateStore.hpp"
 
 #include <algorithm>
 #include <array>
@@ -286,16 +287,23 @@ std::string build_system_prompt(std::string_view file_path,
                                 std::string_view consistency_context)
 {
     const bool prefer_stable_taxonomy = !is_refined_sorting_mode(consistency_context);
+    std::string fallback;
     if (file_type == FileType::Directory) {
-        return directory_categorization_system_prompt();
+        fallback = directory_categorization_system_prompt();
+    } else if (has_marker(file_path, kImageDescriptionMarker)) {
+        fallback = image_categorization_system_prompt(prefer_stable_taxonomy);
+    } else if (FileCategoryPolicy::is_supported_document_file_name(extract_prompt_file_name(file_path))) {
+        fallback = document_categorization_system_prompt(prefer_stable_taxonomy);
+    } else {
+        fallback = generic_file_categorization_system_prompt();
     }
-    if (has_marker(file_path, kImageDescriptionMarker)) {
-        return image_categorization_system_prompt(prefer_stable_taxonomy);
-    }
-    if (FileCategoryPolicy::is_supported_document_file_name(extract_prompt_file_name(file_path))) {
-        return document_categorization_system_prompt(prefer_stable_taxonomy);
-    }
-    return generic_file_categorization_system_prompt();
+
+    return PromptTemplateStore::render_or_default(
+        fallback,
+        extract_prompt_file_name(file_path),
+        std::string(file_path),
+        file_type,
+        std::string(consistency_context));
 }
 
 std::string build_user_prompt(const std::string& file_name,
