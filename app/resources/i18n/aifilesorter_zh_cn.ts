@@ -1154,7 +1154,7 @@ Supports: Nvidia (CUDA), Apple (Metal), CPU.</source>
     <message>
         <location filename="../../lib/MainApp.cpp" line="1833"/>
         <source>Analyze folder</source>
-        <translation>分析文件夹</translation>
+        <translation>生成整理预览</translation>
     </message>
     <message>
         <location filename="../../lib/MainApp.cpp" line="1834"/>
@@ -1638,6 +1638,10 @@ Expected broad categories:
     <message>
         <source>Could not start analysis: %1</source>
         <translation>无法启动分析：%1</translation>
+    </message>
+    <message>
+        <source>No organization mode is selected. Choose AI mode or Rule mode before generating a preview.</source>
+        <translation>尚未选择整理模式。请先选择 AI 模式或规则模式，再生成整理预览。</translation>
     </message>
 </context>
 <context>
@@ -3157,6 +3161,18 @@ Please update to continue. If you choose to quit, the application will close.</s
     <message>
         <source>Manage File Rules…</source>
         <translation>管理文件规则…</translation>
+    </message>
+    <message>
+        <source>Edit rules…</source>
+        <translation>编辑规则…</translation>
+    </message>
+    <message>
+        <source>Open the deterministic rule editor used by Rule mode.</source>
+        <translation>打开规则模式使用的确定性规则编辑器。</translation>
+    </message>
+    <message>
+        <source>Generate preview</source>
+        <translation>生成整理预览</translation>
     </message>
 </context>
 <context>
