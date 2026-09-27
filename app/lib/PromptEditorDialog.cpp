@@ -18,9 +18,10 @@ PromptEditorDialog::PromptEditorDialog(QWidget* parent)
 
     auto* layout = new QVBoxLayout(this);
     auto* description = new QLabel(
-        tr("Edit the system prompt used for AI categorization. The original project prompt remains active "
-           "until the override is enabled. Supported variables: {{filename}}, {{path}}, {{item_type}}, "
-           "{{context}}, {{output_format}}."), this);
+        tr("Edit the prompt used for one-request folder AI organization. "
+           "Supported variables: {{folder_path}}, {{inventory_json}}, {{recursive}}, "
+           "{{item_count}}, {{category_language}}, {{context}}, {{output_schema}}. "
+           "The model receives the whole selected folder inventory in one request."), this);
     description->setWordWrap(true);
     layout->addWidget(description);
 
@@ -72,9 +73,13 @@ void PromptEditorDialog::show_preview()
 
     PromptTemplateStore::set_enabled(true);
     PromptTemplateStore::set_prompt_template(current);
-    const std::string rendered = PromptTemplateStore::render_or_default(
-        "", "example_report.docx", "/home/user/Desktop/example_report.docx",
-        FileType::File, "Allowed main categories: Research, Meetings, Development");
+    const std::string rendered = PromptTemplateStore::render_batch(
+        "/home/user/Desktop/example-folder",
+        R"([{"id":0,"relative_path":"paper.pdf","name":"paper.pdf","type":"file","extension":".pdf"},{"id":1,"relative_path":"notes.txt","name":"notes.txt","type":"file","extension":".txt"}])",
+        false,
+        "English",
+        "Allowed main categories: Research, Meetings, Development",
+        2);
 
     PromptTemplateStore::set_prompt_template(previous);
     PromptTemplateStore::set_enabled(was_enabled);
