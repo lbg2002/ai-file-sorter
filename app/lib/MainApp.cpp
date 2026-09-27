@@ -704,6 +704,8 @@ void MainApp::apply_theme_styles()
         }
     };
 
+    apply_if_changed(this, AppTheme::main_window_style_sheet(current_palette));
+
 #if defined(Q_OS_WIN)
     apply_if_changed(file_explorer_container,
                      AppTheme::file_explorer_panel_style_sheet(current_palette));
