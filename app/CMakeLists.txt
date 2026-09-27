@@ -704,7 +704,7 @@ if(_aifs_enable_translation_generation)
         aifilesorter
         NO_GLOBAL_TARGET
         TS_FILES ${AIFS_TRANSLATION_TS_FILES}
-        SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/startapp_windows.cpp" ${APP_HEADER_SOURCES}
+        SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/startapp_windows.cpp" ${APP_SOURCES} ${APP_HEADER_SOURCES}
         OPTIONS -no-obsolete
     )
 
