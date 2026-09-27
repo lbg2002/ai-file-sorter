@@ -164,7 +164,13 @@ jobs:
           mkdir -p dist/ci-artifacts
           case "${{ matrix.artifact_kind }}" in
             deb)
-              ./app/scripts/package_deb.sh --include-all
+              if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+                # PR builds intentionally skip CUDA runtime compilation above,
+                # so only require the variants that were actually staged.
+                ./app/scripts/package_deb.sh --include-vulkan
+              else
+                ./app/scripts/package_deb.sh --include-all
+              fi
               cp dist/aifilesorter_deb/*.deb dist/ci-artifacts/
               ;;
             rpm)
