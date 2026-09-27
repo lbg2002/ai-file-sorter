@@ -353,6 +353,14 @@ Edit the affected category/name, or deselect one side of a duplicate/conflict, t
 
 请修改受影响的类别或文件名，或取消选择重复/冲突项的一方，然后重试。</translation>
     </message>
+    <message>
+        <source>Safety check: %1 duplicate source(s), %2 missing item(s), %3 unknown source(s), %4 destination conflict(s), %5 unsafe target(s). Missing items remain in their original location. Problem rows are deselected by default; edit/reselect them only after fixing the issue.</source>
+        <translation>安全检查：%1 个重复源文件，%2 个遗漏项目，%3 个未知源文件，%4 个目标路径冲突，%5 个不安全目标。遗漏项目会保留在原位置。有问题的行默认不选中；修复后再编辑或重新选中。</translation>
+    </message>
+    <message>
+        <source>A final safety check runs against the filesystem snapshot before any selected operation is applied.</source>
+        <translation>执行任何已选操作前，程序都会再次与原始文件系统快照进行安全校验。</translation>
+    </message>
 </context>
 <context>
     <name>CategorizationProgressDialog</name>
