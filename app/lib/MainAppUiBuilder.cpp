@@ -456,16 +456,40 @@ void MainAppUiBuilder::build_central_panel(MainApp& app) {
 
     app.organization_mode_heading = new QLabel(QObject::tr("Organization mode"), central);
     app.organization_mode_heading->setObjectName(QStringLiteral("aifsSectionTitle"));
-    app.organization_mode_ai_radio = new QRadioButton(QObject::tr("AI mode (one request per folder)"), central);
-    app.organization_mode_rules_radio = new QRadioButton(QObject::tr("Rule mode"), central);
+
+    // IMPORTANT: keep organization mode and categorization style radio buttons
+    // under different parent widgets. QRadioButton auto-exclusivity is parent-
+    // scoped; sharing the same parent caused selecting "refined/consistent" to
+    // silently uncheck AI/Rule mode and made Rule mode fall through to AI.
+    auto* organization_mode_selector = new QWidget(central);
+    organization_mode_selector->setObjectName(QStringLiteral("aifsModeSelector"));
+    auto* organization_mode_selector_layout = new QHBoxLayout(organization_mode_selector);
+    organization_mode_selector_layout->setContentsMargins(0, 0, 0, 0);
+    organization_mode_selector_layout->setSpacing(6);
+
+    app.organization_mode_ai_radio =
+        new QRadioButton(QObject::tr("AI mode (one request per folder)"), organization_mode_selector);
+    app.organization_mode_rules_radio =
+        new QRadioButton(QObject::tr("Rule mode"), organization_mode_selector);
+    app.organization_mode_ai_radio->setObjectName(QStringLiteral("aifsModeChoice"));
+    app.organization_mode_rules_radio->setObjectName(QStringLiteral("aifsModeChoice"));
+    organization_mode_selector_layout->addWidget(app.organization_mode_ai_radio);
+    organization_mode_selector_layout->addWidget(app.organization_mode_rules_radio);
+    app.organization_mode_ai_radio->setChecked(true);
+
     app.ai_model_button = new QPushButton(QObject::tr("AI model…"), central);
     app.ai_model_button->setObjectName(QStringLiteral("aifsSecondaryButton"));
-    app.organization_mode_ai_radio->setChecked(true);
 
     app.categorization_style_heading = new QLabel(central);
     app.categorization_style_heading->setObjectName(QStringLiteral("aifsSectionTitle"));
-    app.categorization_style_refined_radio = new QRadioButton(central);
-    app.categorization_style_consistent_radio = new QRadioButton(central);
+    auto* categorization_style_selector = new QWidget(central);
+    auto* categorization_style_selector_layout = new QHBoxLayout(categorization_style_selector);
+    categorization_style_selector_layout->setContentsMargins(0, 0, 0, 0);
+    categorization_style_selector_layout->setSpacing(8);
+    app.categorization_style_refined_radio = new QRadioButton(categorization_style_selector);
+    app.categorization_style_consistent_radio = new QRadioButton(categorization_style_selector);
+    categorization_style_selector_layout->addWidget(app.categorization_style_refined_radio);
+    categorization_style_selector_layout->addWidget(app.categorization_style_consistent_radio);
     app.use_whitelist_checkbox = new QCheckBox(central);
     app.whitelist_selector = new QComboBox(central);
     app.whitelist_selector->setEnabled(false);
@@ -490,16 +514,14 @@ void MainAppUiBuilder::build_central_panel(MainApp& app) {
     auto* analyze_layout = new QHBoxLayout();
     auto* categorization_layout = new QVBoxLayout();
     auto* organization_mode_row = new QHBoxLayout();
-    organization_mode_row->addWidget(app.organization_mode_ai_radio);
-    organization_mode_row->addWidget(app.organization_mode_rules_radio);
+    organization_mode_row->addWidget(organization_mode_selector);
     organization_mode_row->addWidget(app.ai_model_button);
     organization_mode_row->addStretch();
     categorization_layout->addWidget(app.organization_mode_heading);
     categorization_layout->addLayout(organization_mode_row);
     categorization_layout->addSpacing(4);
     auto* toggle_row = new QHBoxLayout();
-    toggle_row->addWidget(app.categorization_style_refined_radio);
-    toggle_row->addWidget(app.categorization_style_consistent_radio);
+    toggle_row->addWidget(categorization_style_selector);
     toggle_row->addStretch();
     categorization_layout->addWidget(app.categorization_style_heading);
     categorization_layout->addLayout(toggle_row);
