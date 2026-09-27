@@ -34,6 +34,7 @@ private:
 
     QApplication* app_{nullptr};
     std::unique_ptr<QTranslator> translator_;
+    std::unique_ptr<QTranslator> qt_translator_;
     Language current_language_{Language::English};
     std::vector<LanguageInfo> languages_;
 };

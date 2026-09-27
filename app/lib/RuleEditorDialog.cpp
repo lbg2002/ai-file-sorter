@@ -1,6 +1,7 @@
 #include "RuleEditorDialog.hpp"
 
 #include "RuleEngine.hpp"
+#include "AppTheme.hpp"
 
 #include <QCheckBox>
 #include <QDialogButtonBox>
@@ -14,6 +15,8 @@
 RuleEditorDialog::RuleEditorDialog(QWidget* parent)
     : QDialog(parent)
 {
+    setObjectName(QStringLiteral("fileSortGuardUtilityDialog"));
+    setStyleSheet(AppTheme::utility_dialog_style_sheet(palette()));
     setWindowTitle(tr("File Rules"));
     resize(880, 520);
 

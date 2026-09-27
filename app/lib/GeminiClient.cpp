@@ -154,7 +154,7 @@ void configure_request_payload(CurlRequest& request,
 {
     curl_easy_setopt(request.handle, CURLOPT_URL, api_url.c_str());
     curl_easy_setopt(request.handle, CURLOPT_POST, 1L);
-    curl_easy_setopt(request.handle, CURLOPT_TIMEOUT, 5L);
+    curl_easy_setopt(request.handle, CURLOPT_TIMEOUT, 120L);
 
     request.headers = curl_slist_append(request.headers, "Content-Type: application/json");
     curl_easy_setopt(request.handle, CURLOPT_HTTPHEADER, request.headers);

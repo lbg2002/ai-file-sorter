@@ -4,6 +4,7 @@
 #include <QCoreApplication>
 #include <QDir>
 #include <QFileInfo>
+#include <QLibraryInfo>
 
 #include <algorithm>
 
@@ -78,6 +79,9 @@ void TranslationManager::initialize(QApplication* app)
     if (!translator_) {
         translator_ = std::make_unique<QTranslator>();
     }
+    if (!qt_translator_) {
+        qt_translator_ = std::make_unique<QTranslator>();
+    }
     if (languages_.empty()) {
         languages_ = build_languages();
     }
@@ -110,10 +114,29 @@ void TranslationManager::set_language(Language language)
         app_->removeTranslator(translator_.get());
         translator_ = std::make_unique<QTranslator>();
     }
+    if (qt_translator_) {
+        app_->removeTranslator(qt_translator_.get());
+        qt_translator_ = std::make_unique<QTranslator>();
+    }
 
     if (info && language != Language::English) {
         if (load_translation(*info)) {
             app_->installTranslator(translator_.get());
+
+            QString locale_code = info->code;
+            locale_code.replace('-', '_');
+            const QString qt_translation_dir =
+                QLibraryInfo::path(QLibraryInfo::TranslationsPath);
+            const QStringList qt_candidates{
+                QStringLiteral("qtbase_%1").arg(locale_code),
+                QStringLiteral("qt_%1").arg(locale_code)
+            };
+            for (const QString& candidate : qt_candidates) {
+                if (qt_translator_->load(candidate, qt_translation_dir)) {
+                    app_->installTranslator(qt_translator_.get());
+                    break;
+                }
+            }
         } else {
             language = Language::English;
         }

@@ -29,6 +29,7 @@
 #include "WhatsNewContent.hpp"
 #include "CategoryLanguage.hpp"
 #include "CategoryLanguageSupport.hpp"
+#include "BatchFolderCategorizer.hpp"
 #include "MainAppUiBuilder.hpp"
 #include "PromptEditorDialog.hpp"
 #include "PromptTemplateStore.hpp"
@@ -702,6 +703,8 @@ void MainApp::apply_theme_styles()
             widget->setStyleSheet(style_sheet);
         }
     };
+
+    apply_if_changed(this, AppTheme::main_window_style_sheet(current_palette));
 
 #if defined(Q_OS_WIN)
     apply_if_changed(file_explorer_container,
@@ -1400,6 +1403,9 @@ void MainApp::schedule_backend_status_label_refresh()
 void MainApp::on_language_selected(Language language)
 {
     settings.set_language(language);
+    if (!test_mode_) {
+        settings.save();
+    }
     TranslationManager::instance().set_language(language);
     if (ui_translator_) {
         ui_translator_->update_language_checks();
@@ -1547,20 +1553,48 @@ void MainApp::on_analyze_clicked()
         return;
     }
 
-    if (organization_mode_rules_radio && organization_mode_rules_radio->isChecked()) {
+    const bool rule_mode =
+        organization_mode_rules_radio && organization_mode_rules_radio->isChecked();
+    const bool ai_mode =
+        organization_mode_ai_radio && organization_mode_ai_radio->isChecked();
+
+    if (rule_mode) {
         run_rule_mode();
+        return;
+    }
+    if (!ai_mode) {
+        QMessageBox::warning(
+            this,
+            tr("Organization mode"),
+            tr("No organization mode is selected. Choose AI mode or Rule mode before generating a preview."));
         return;
     }
 
     try {
-        last_scan_snapshot_ = results_coordinator.list_directory(folder_path, effective_scan_options());
+        last_scan_root_ = folder_path;
+        const FileScanOptions selected_options = effective_scan_options();
+        last_scan_snapshot_ = results_coordinator.list_directory(folder_path, selected_options);
+
+        FileScanOptions folder_context_options = FileScanOptions::Directories;
+        if (settings.get_include_subdirectories()) {
+            folder_context_options = folder_context_options | FileScanOptions::Recursive;
+        }
+        if (has_flag(selected_options, FileScanOptions::HiddenFiles)) {
+            folder_context_options = folder_context_options | FileScanOptions::HiddenFiles;
+        }
+        last_existing_directory_snapshot_ =
+            results_coordinator.list_directory(folder_path, folder_context_options);
     } catch (const std::exception& ex) {
         show_error_dialog(fmt::format("Could not capture the filesystem snapshot: {}", ex.what()));
         return;
     }
 
     if (!using_local_llm) {
-        if (!Utils::is_network_available()) {
+        const bool custom_openai_compatible =
+            settings.get_llm_choice() == LLMChoice::Remote_Custom;
+        // A custom OpenAI-compatible endpoint may be a local vLLM/Ollama/LM
+        // Studio server on an isolated LAN, so do not require public Internet.
+        if (!custom_openai_compatible && !Utils::is_network_available()) {
             show_error_dialog(ERR_NO_INTERNET_CONNECTION);
             core_logger->warn("Network unavailable when attempting to analyze '{}'", folder_path);
             return;
@@ -1596,10 +1630,12 @@ void MainApp::on_analyze_clicked()
 
         analyze_thread = std::thread([this]() {
             try {
-                perform_analysis();
+                perform_batch_ai_analysis();
             } catch (const std::exception& ex) {
                 core_logger->error("Exception during analysis: {}", ex.what());
-                post_analysis_failure(std::string("Analysis error: ") + ex.what());
+                const QString message =
+                    tr("Analysis failed: %1").arg(QString::fromUtf8(ex.what()));
+                post_analysis_failure(message.toStdString());
             }
         });
     } catch (const std::exception& ex) {
@@ -1607,7 +1643,8 @@ void MainApp::on_analyze_clicked()
         update_analyze_button_state(false);
         close_progress_dialog();
         core_logger->error("Could not start analysis: {}", ex.what());
-        show_error_dialog(std::string("Could not start analysis: ") + ex.what());
+        show_error_dialog(
+            tr("Could not start analysis: %1").arg(QString::fromUtf8(ex.what())).toStdString());
     }
 }
 
@@ -2944,6 +2981,90 @@ AnalysisWorkflowContext MainApp::make_analysis_workflow_context()
         }};
 }
 
+void MainApp::perform_batch_ai_analysis()
+{
+    if (stop_analysis.load()) {
+        const QPointer<MainApp> app(this);
+        QMetaObject::invokeMethod(this, [app]() {
+            if (app) {
+                app->handle_analysis_cancelled();
+            }
+        }, Qt::QueuedConnection);
+        return;
+    }
+
+    if (last_scan_snapshot_.empty()) {
+        throw std::runtime_error("The selected folder contains no items matching the current scan options.");
+    }
+
+    report_progress(fmt::format(
+        "[BATCH] Sending {} item(s) from the selected folder in one AI request{}.",
+        last_scan_snapshot_.size(),
+        settings.get_include_subdirectories() ? " (recursive)" : ""));
+
+    BatchFolderCategorizationOptions options;
+    options.folder_path = last_scan_root_;
+    options.recursive = settings.get_include_subdirectories();
+    options.use_subcategories = settings.get_use_subcategories();
+    options.category_language = categoryLanguageDisplay(settings.get_category_language());
+    options.prefer_stable_categories = settings.get_use_consistency_hints();
+    if (settings.get_use_whitelist()) {
+        options.allowed_categories = settings.get_allowed_categories();
+        options.allowed_subcategories_by_category =
+            settings.get_allowed_subcategories_by_category();
+    }
+
+    const std::filesystem::path batch_root = Utils::utf8_to_path(last_scan_root_).lexically_normal();
+    for (const auto& directory : last_existing_directory_snapshot_) {
+        const std::filesystem::path full =
+            Utils::utf8_to_path(directory.full_path).lexically_normal();
+        const std::filesystem::path relative = full.lexically_relative(batch_root);
+        const std::string text = relative.empty()
+            ? directory.file_name
+            : Utils::path_to_utf8(relative);
+        if (!text.empty() && text != "." && text != ".." &&
+            text.rfind("../", 0) != 0 && text.rfind("..\\", 0) != 0) {
+            options.existing_directories.push_back(text);
+        }
+    }
+
+    auto llm = make_llm_client();
+    BatchFolderCategorizer categorizer;
+    const BatchFolderCategorizationResult batch =
+        categorizer.categorize(*llm, last_scan_snapshot_, options);
+
+    if (stop_analysis.load()) {
+        const QPointer<MainApp> app(this);
+        QMetaObject::invokeMethod(this, [app]() {
+            if (app) {
+                app->handle_analysis_cancelled();
+            }
+        }, Qt::QueuedConnection);
+        return;
+    }
+
+    already_categorized_files.clear();
+    files_to_categorize = last_scan_snapshot_;
+    new_files_with_categories = batch.files;
+    new_files_to_sort = batch.files;
+
+    report_progress(fmt::format(
+        "[BATCH] AI returned {} structured row(s) for {} scanned item(s). "
+        "The review screen will verify omissions, duplicates, invented ids, and destination conflicts.",
+        batch.returned_count,
+        batch.requested_count));
+
+    const QPointer<MainApp> app(this);
+    QMetaObject::invokeMethod(
+        this,
+        [app]() {
+            if (app) {
+                app->handle_analysis_finished();
+            }
+        },
+        Qt::QueuedConnection);
+}
+
 void MainApp::perform_analysis()
 {
     const AnalysisRunResult result =
@@ -3618,6 +3739,10 @@ void MainApp::show_results_dialog(const std::vector<CategorizedFile>& results)
                                                                        &user_learning_store_,
                                                                        &review_history_store_);
         if (!rule_mode) {
+            categorization_dialog->set_integrity_context(
+                !last_scan_snapshot_.empty() ? last_scan_snapshot_ : std::vector<FileEntry>{},
+                get_folder_path(),
+                show_subcategory);
             categorization_dialog->set_integrity_report(std::move(integrity_report));
         }
         categorization_dialog->show_results(review_results,

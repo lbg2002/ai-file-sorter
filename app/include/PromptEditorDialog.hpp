@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QCoreApplication>
 #include <QDialog>
 
 class QCheckBox;
@@ -7,6 +8,7 @@ class QPlainTextEdit;
 class QLabel;
 
 class PromptEditorDialog : public QDialog {
+    Q_DECLARE_TR_FUNCTIONS(PromptEditorDialog)
 public:
     explicit PromptEditorDialog(QWidget* parent = nullptr);
 

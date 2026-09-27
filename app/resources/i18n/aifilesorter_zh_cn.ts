@@ -243,7 +243,7 @@
     <message>
         <location filename="../../lib/CategorizationDialog.cpp" line="2934"/>
         <source>Process</source>
-        <translation>过程</translation>
+        <translation>处理</translation>
     </message>
     <message>
         <location filename="../../lib/CategorizationDialog.cpp" line="2935"/>
@@ -273,7 +273,7 @@
     <message>
         <location filename="../../lib/CategorizationDialog.cpp" line="2940"/>
         <source>Status</source>
-        <translation>地位</translation>
+        <translation>状态</translation>
     </message>
     <message>
         <location filename="../../lib/CategorizationDialog.cpp" line="2941"/>
@@ -283,7 +283,7 @@
     <message>
         <location filename="../../lib/CategorizationDialog.cpp" line="2964"/>
         <source>Moved</source>
-        <translation>搬家了</translation>
+        <translation>已移动</translation>
     </message>
     <message>
         <location filename="../../lib/CategorizationDialog.cpp" line="2967"/>
@@ -304,6 +304,62 @@
         <location filename="../../lib/CategorizationDialog.cpp" line="2979"/>
         <source>Not selected</source>
         <translation>未选择</translation>
+    </message>
+    <message>
+        <source>Safety check: %1 duplicate source(s), %2 missing item(s), %3 unknown source(s), %4 destination conflict(s), %5 unsafe target(s). Missing items remain in their original location. Duplicate, unknown, destination-conflict, or unsafe-target rows must be resolved before processing.</source>
+        <translation>安全检查：%1 个重复源文件，%2 个遗漏项目，%3 个未知源文件，%4 个目标路径冲突，%5 个不安全目标。遗漏项目将保留在原位置。重复、未知、目标冲突或不安全目标必须在执行前处理。</translation>
+    </message>
+    <message>
+        <source>Duplicate source</source>
+        <translation>重复源文件</translation>
+    </message>
+    <message>
+        <source>Missing from result</source>
+        <translation>结果中遗漏</translation>
+    </message>
+    <message>
+        <source>Unknown source</source>
+        <translation>未知源文件</translation>
+    </message>
+    <message>
+        <source>Destination conflict</source>
+        <translation>目标路径冲突</translation>
+    </message>
+    <message>
+        <source>Unsafe target</source>
+        <translation>不安全目标</translation>
+    </message>
+    <message>
+        <source>Processing is disabled while blocking safety anomalies are present.</source>
+        <translation>存在阻断性安全异常时，禁止执行整理。</translation>
+    </message>
+    <message>
+        <source>Safety check blocked processing</source>
+        <translation>安全检查已阻止执行</translation>
+    </message>
+    <message>
+        <source>The selected operations still contain unsafe AI output:
+Duplicate sources: %1
+Unknown sources: %2
+Destination conflicts: %3
+Unsafe targets: %4
+
+Edit the affected category/name, or deselect one side of a duplicate/conflict, then try again.</source>
+        <translation>所选操作中仍包含不安全的 AI 输出：
+重复源文件：%1
+未知源文件：%2
+目标路径冲突：%3
+不安全目标：%4
+
+请修改受影响的类别或文件名，或取消选择重复/冲突项的一方，然后重试。</translation>
+    </message>
+    <message>
+        <source>Safety check: %1 duplicate source(s), %2 missing item(s), %3 unknown source(s), %4 destination conflict(s), %5 unsafe target(s). Missing items remain in their original location. Problem rows are deselected by default; edit/reselect them only after fixing the issue.</source>
+        <translation>安全检查：%1 个重复源文件，%2 个遗漏项目，%3 个未知源文件，%4 个目标路径冲突，%5 个不安全目标。遗漏项目会保留在原位置。有问题的行默认不选中；修复后再编辑或重新选中。</translation>
+    </message>
+    <message>
+        <source>A final safety check runs against the filesystem snapshot before any selected operation is applied.</source>
+        <translation>执行任何已选操作前，程序都会再次与原始文件系统快照进行安全校验。</translation>
     </message>
 </context>
 <context>
@@ -420,12 +476,12 @@
     <message>
         <location filename="../../lib/CustomApiDialog.cpp" line="42"/>
         <source>e.g. llama-3.1, gpt-4o-mini</source>
-        <translation>例如美洲驼-3.1，gpt-4o-迷你</translation>
+        <translation>例如 llama-3.1、gpt-4o-mini</translation>
     </message>
     <message>
         <location filename="../../lib/CustomApiDialog.cpp" line="47"/>
         <source>Show</source>
-        <translation>展示</translation>
+        <translation>显示</translation>
     </message>
     <message>
         <location filename="../../lib/CustomApiDialog.cpp" line="54"/>
@@ -440,7 +496,7 @@
     <message>
         <location filename="../../lib/CustomApiDialog.cpp" line="56"/>
         <source>Base URL or endpoint</source>
-        <translation>基点 URL 或端点</translation>
+        <translation>Base URL 或端点</translation>
     </message>
     <message>
         <location filename="../../lib/CustomApiDialog.cpp" line="57"/>
@@ -450,12 +506,42 @@
     <message>
         <location filename="../../lib/CustomApiDialog.cpp" line="58"/>
         <source>API key (optional)</source>
-        <translation>API键（可选）</translation>
+        <translation>API Key（可选）</translation>
     </message>
     <message>
         <location filename="../../lib/CustomApiDialog.cpp" line="62"/>
         <source>Enter a base URL (e.g. http://localhost:1234/v1) or a full /chat/completions endpoint.</source>
-        <translation>输入基本 URL（例如 http://localhost:1234/v1) 或完整的 /chat/completions 端点。</translation>
+        <translation>请输入 Base URL（例如 http://localhost:1234/v1），或完整的 /chat/completions 端点。</translation>
+    </message>
+    <message>
+        <source>Test connection</source>
+        <translation>测试连接</translation>
+    </message>
+    <message>
+        <source>Testing…</source>
+        <translation>测试中…</translation>
+    </message>
+    <message>
+        <source>Connection successful</source>
+        <translation>连接成功</translation>
+    </message>
+    <message>
+        <source>The endpoint responded successfully. Model reply:
+%1</source>
+        <translation>端点已成功响应。模型返回：
+%1</translation>
+    </message>
+    <message>
+        <source>Connection failed</source>
+        <translation>连接失败</translation>
+    </message>
+    <message>
+        <source>Could not complete a test request.
+
+%1</source>
+        <translation>测试请求未能完成。
+
+%1</translation>
     </message>
 </context>
 <context>
@@ -572,7 +658,7 @@ Supports: Nvidia (CUDA), Apple (Metal), CPU.</source>
     <message>
         <location filename="../../lib/LLMSelectionDialog.cpp" line="1524"/>
         <source>Recommended</source>
-        <translation>受到推崇的</translation>
+        <translation>推荐</translation>
     </message>
     <message>
         <location filename="../../lib/LLMSelectionDialog.cpp" line="305"/>
@@ -589,7 +675,7 @@ Supports: Nvidia (CUDA), Apple (Metal), CPU.</source>
     <message>
         <location filename="../../lib/LLMSelectionDialog.cpp" line="317"/>
         <source>Gemini (Google AI Studio API key)</source>
-        <translation>双子座（Google AI Studio API 密钥）</translation>
+        <translation>Gemini（Google AI Studio API 密钥）</translation>
     </message>
     <message>
         <location filename="../../lib/LLMSelectionDialog.cpp" line="319"/>
@@ -610,7 +696,7 @@ Supports: Nvidia (CUDA), Apple (Metal), CPU.</source>
     <message>
         <location filename="../../lib/LLMSelectionDialog.cpp" line="336"/>
         <source>Gemini API key</source>
-        <translation>双子座 API 键</translation>
+        <translation>Gemini API 密钥</translation>
     </message>
     <message>
         <location filename="../../lib/LLMSelectionDialog.cpp" line="341"/>
@@ -966,6 +1052,14 @@ Supports: Nvidia (CUDA), Apple (Metal), CPU.</source>
         <source>Custom: %1</source>
         <translation>自定义：%1</translation>
     </message>
+    <message>
+        <source>Custom OpenAI-compatible API (vLLM / Ollama / LM Studio / other)</source>
+        <translation>自定义 OpenAI 兼容 API（vLLM / Ollama / LM Studio / 其他）</translation>
+    </message>
+    <message>
+        <source>Set a custom base URL, model name, and optional API key. The folder-batch workflow sends one OpenAI-compatible chat request to this endpoint.</source>
+        <translation>设置自定义 Base URL、模型名称和可选 API Key。文件夹批处理会向该端点发送一次 OpenAI 兼容的聊天请求。</translation>
+    </message>
 </context>
 <context>
     <name>MainApp</name>
@@ -1060,7 +1154,7 @@ Supports: Nvidia (CUDA), Apple (Metal), CPU.</source>
     <message>
         <location filename="../../lib/MainApp.cpp" line="1833"/>
         <source>Analyze folder</source>
-        <translation>分析文件夹</translation>
+        <translation>生成整理预览</translation>
     </message>
     <message>
         <location filename="../../lib/MainApp.cpp" line="1834"/>
@@ -1524,6 +1618,30 @@ Expected broad categories:
         <location filename="../../lib/MainApp.cpp" line="3087"/>
         <source>Image analysis failed to start with the GPU backend.</source>
         <translation>图像分析无法从 GPU 后端启动。</translation>
+    </message>
+    <message>
+        <source>Rule mode</source>
+        <translation>规则模式</translation>
+    </message>
+    <message>
+        <source>No rules are configured. Add at least one rule from Settings -&gt; Manage File Rules.</source>
+        <translation>尚未配置规则。请在“设置 → 管理文件规则”中至少添加一条规则。</translation>
+    </message>
+    <message>
+        <source>No scanned items matched the configured rules. No files were changed.</source>
+        <translation>扫描到的项目均未匹配已配置规则，没有文件被修改。</translation>
+    </message>
+    <message>
+        <source>Analysis failed: %1</source>
+        <translation>分析失败：%1</translation>
+    </message>
+    <message>
+        <source>Could not start analysis: %1</source>
+        <translation>无法启动分析：%1</translation>
+    </message>
+    <message>
+        <source>No organization mode is selected. Choose AI mode or Rule mode before generating a preview.</source>
+        <translation>尚未选择整理模式。请先选择 AI 模式或规则模式，再生成整理预览。</translation>
     </message>
 </context>
 <context>
@@ -2514,7 +2632,7 @@ Please update to continue. If you choose to quit, the application will close.</s
     <message>
         <location filename="../../lib/UiTranslator.cpp" line="46"/>
         <source>&amp;Quit</source>
-        <translation>&amp;辞职</translation>
+        <translation>&amp;退出</translation>
     </message>
     <message>
         <location filename="../../lib/UiTranslator.cpp" line="48"/>
@@ -3008,6 +3126,54 @@ Please update to continue. If you choose to quit, the application will close.</s
         <source>&amp;Simplified Chinese</source>
         <translation>&amp;简体中文</translation>
     </message>
+    <message>
+        <source>Organization mode</source>
+        <translation>整理模式</translation>
+    </message>
+    <message>
+        <source>AI mode (one request per folder)</source>
+        <translation>AI 模式（每个文件夹一次请求）</translation>
+    </message>
+    <message>
+        <source>Send the selected folder inventory to the chosen AI model in one structured request.</source>
+        <translation>将所选文件夹的文件清单通过一次结构化请求发送给选定的 AI 模型。</translation>
+    </message>
+    <message>
+        <source>Rule mode</source>
+        <translation>规则模式</translation>
+    </message>
+    <message>
+        <source>Organize files with deterministic rules without calling an AI model.</source>
+        <translation>使用确定性规则整理文件，不调用 AI 模型。</translation>
+    </message>
+    <message>
+        <source>AI model…</source>
+        <translation>AI 模型…</translation>
+    </message>
+    <message>
+        <source>Choose or configure the AI model used for folder organization.</source>
+        <translation>选择或配置用于文件夹整理的 AI 模型。</translation>
+    </message>
+    <message>
+        <source>Edit AI Prompt…</source>
+        <translation>编辑 AI 提示词…</translation>
+    </message>
+    <message>
+        <source>Manage File Rules…</source>
+        <translation>管理文件规则…</translation>
+    </message>
+    <message>
+        <source>Edit rules…</source>
+        <translation>编辑规则…</translation>
+    </message>
+    <message>
+        <source>Open the deterministic rule editor used by Rule mode.</source>
+        <translation>打开规则模式使用的确定性规则编辑器。</translation>
+    </message>
+    <message>
+        <source>Generate preview</source>
+        <translation>生成整理预览</translation>
+    </message>
 </context>
 <context>
     <name>WhitelistManagerDialog</name>
@@ -3040,6 +3206,105 @@ Please update to continue. If you choose to quit, the application will close.</s
         <location filename="../../lib/WhitelistManagerDialog.cpp" line="295"/>
         <source>The default list cannot be removed.</source>
         <translation>无法删除默认列表。</translation>
+    </message>
+</context>
+<context>
+    <name>PromptEditorDialog</name>
+    <message>
+        <source>AI Prompt Editor</source>
+        <translation>AI 提示词编辑器</translation>
+    </message>
+    <message>
+        <source>Edit the prompt used for one-request folder AI organization. Supported variables: {{folder_path}}, {{inventory_json}}, {{recursive}}, {{item_count}}, {{category_language}}, {{context}}, {{output_schema}}. The model receives the whole selected folder inventory in one request.</source>
+        <translation>编辑用于“单次请求整理整个文件夹”的 AI 提示词。支持变量：{{folder_path}}、{{inventory_json}}、{{recursive}}、{{item_count}}、{{category_language}}、{{context}}、{{output_schema}}。模型会在一次请求中接收所选文件夹的完整文件清单。</translation>
+    </message>
+    <message>
+        <source>Enable custom prompt override</source>
+        <translation>启用自定义提示词</translation>
+    </message>
+    <message>
+        <source>Restore default</source>
+        <translation>恢复默认</translation>
+    </message>
+    <message>
+        <source>Preview rendered prompt</source>
+        <translation>预览最终提示词</translation>
+    </message>
+    <message>
+        <source>Could not save the prompt override.</source>
+        <translation>无法保存自定义提示词。</translation>
+    </message>
+    <message>
+        <source>Rendered prompt preview</source>
+        <translation>最终提示词预览</translation>
+    </message>
+</context>
+<context>
+    <name>RuleEditorDialog</name>
+    <message>
+        <source>File Rules</source>
+        <translation>文件规则</translation>
+    </message>
+    <message>
+        <source>Rules run top-to-bottom; the first match wins. Fields: extension, filename, path, size. Operators: equals, contains, regex, startswith, endswith, &gt;, &lt;. Example: extension / equals / .pdf / Documents / PDF.</source>
+        <translation>规则按从上到下的顺序执行，首个匹配规则生效。字段：扩展名、文件名、路径、大小。操作符：等于、包含、正则、开头匹配、结尾匹配、&gt;、&lt;。示例：extension / equals / .pdf / Documents / PDF。</translation>
+    </message>
+    <message>
+        <source>Enabled</source>
+        <translation>启用</translation>
+    </message>
+    <message>
+        <source>Field</source>
+        <translation>字段</translation>
+    </message>
+    <message>
+        <source>Operator</source>
+        <translation>操作符</translation>
+    </message>
+    <message>
+        <source>Value</source>
+        <translation>值</translation>
+    </message>
+    <message>
+        <source>Category</source>
+        <translation>类别</translation>
+    </message>
+    <message>
+        <source>Subcategory</source>
+        <translation>子类别</translation>
+    </message>
+    <message>
+        <source>Add rule</source>
+        <translation>添加规则</translation>
+    </message>
+    <message>
+        <source>Remove selected</source>
+        <translation>删除所选规则</translation>
+    </message>
+    <message>
+        <source>Could not save rules.</source>
+        <translation>无法保存规则。</translation>
+    </message>
+</context>
+<context>
+    <name>BatchFolderCategorizer</name>
+    <message>
+        <source>The AI response could not be parsed as structured JSON after one automatic repair retry. Check the selected model/API compatibility or open the prompt editor and try again.
+
+First error: %1
+Retry error: %2</source>
+        <translation>AI 返回内容在自动修复重试一次后仍无法解析为结构化 JSON。请检查所选模型/API 是否兼容，或打开提示词编辑器调整后重试。
+
+首次错误：%1
+重试错误：%2</translation>
+    </message>
+    <message>
+        <source>The AI request failed before a complete response was received. Items: %1, prompt size: %2 KiB.
+
+%3</source>
+        <translation>AI 请求在收到完整响应之前失败。项目数：%1，提示词大小：%2 KiB。
+
+%3</translation>
     </message>
 </context>
 </TS>

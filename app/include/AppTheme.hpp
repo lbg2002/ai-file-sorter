@@ -61,6 +61,16 @@ QString review_dialog_style_sheet(const QPalette& palette);
  */
 QString progress_dialog_style_sheet(const QPalette& palette);
 
+/**
+ * @brief Builds the modern main-window stylesheet used by FileSort Guard.
+ */
+QString main_window_style_sheet(const QPalette& palette);
+
+/**
+ * @brief Builds a shared stylesheet for small settings/editor dialogs.
+ */
+QString utility_dialog_style_sheet(const QPalette& palette);
+
 } // namespace AppTheme
 
 #endif // APPTHEME_HPP

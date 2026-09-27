@@ -95,6 +95,9 @@ while [[ $# -gt 0 ]]; do
 done
 
 VERSION="${VERSION_ARG:-$(VERSION_FROM_HEADER "$APP_DIR/include/app_version.hpp")}"
+if [[ -n "${AIFS_PACKAGE_REVISION:-}" ]]; then
+    VERSION="${VERSION}+${AIFS_PACKAGE_REVISION}"
+fi
 
 if [[ "$AUTO_INCLUDE_GPU" == "0" && ( "$REQUIRE_CUDA" == "1" || "$REQUIRE_VULKAN" == "1" ) ]]; then
     echo "Cannot combine --cpu-only with GPU include flags." >&2
@@ -192,7 +195,8 @@ mkdir -p \
     "$PKG_ROOT/opt/aifilesorter/bin" \
     "$PKG_ROOT/opt/aifilesorter/lib" \
     "$PKG_ROOT/opt/aifilesorter/certs" \
-    "$PKG_ROOT/usr/bin"
+    "$PKG_ROOT/usr/bin" \
+    "$PKG_ROOT/usr/share/applications"
 
 install -m 0755 "$BIN_PATH" "$PKG_ROOT/opt/aifilesorter/bin/aifilesorter-bin"
 ln -sf aifilesorter-bin "$PKG_ROOT/opt/aifilesorter/bin/aifilesorter"
@@ -281,6 +285,7 @@ PACKAGE_DEPENDS=(
     "libqt6core6 (>= 6.2)"
     "libqt6dbus6 (>= 6.2)"
     "qt6-wayland"
+    "qt6-translations-l10n"
     "$CURL_DEP"
     "$JSONCPP_DEP"
     "libsqlite3-0"
@@ -320,6 +325,22 @@ python3 "$SCRIPT_DIR/gen_run_wrapper.py" \
 chmod 0755 "$PKG_ROOT/usr/bin/run_aifilesorter.sh"
 ln -sf run_aifilesorter.sh "$PKG_ROOT/usr/bin/aifilesorter"
 
+DESKTOP_FILE="$PKG_ROOT/usr/share/applications/filesort-guard.desktop"
+cat > "$DESKTOP_FILE" <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=FileSort Guard
+GenericName=Intelligent File Organizer
+Comment=Organize files with AI or deterministic rules
+Exec=aifilesorter
+Icon=folder
+Terminal=false
+Categories=Utility;FileTools;
+Keywords=file;organizer;sort;AI;folder;
+StartupNotify=true
+EOF
+chmod 0644 "$DESKTOP_FILE"
+
 CONTROL_FILE="$PKG_ROOT/DEBIAN/control"
 cat > "$CONTROL_FILE" <<EOF
 Package: aifilesorter
@@ -342,6 +363,7 @@ chmod 0755 "$PKG_ROOT/opt/aifilesorter/bin/aifilesorter-bin"
 chmod 0755 "$PKG_ROOT/opt/aifilesorter/bin/aifilesorter"
 chmod 0755 "$PKG_ROOT/usr/bin/run_aifilesorter.sh"
 chmod 0755 "$PKG_ROOT/usr/bin/aifilesorter"
+chmod 0644 "$PKG_ROOT/usr/share/applications/filesort-guard.desktop"
 
 SIZE_KB=$(du -sk "$PKG_ROOT" | cut -f1)
 sed -i "s/^Installed-Size: .*/Installed-Size: ${SIZE_KB}/" "$CONTROL_FILE"

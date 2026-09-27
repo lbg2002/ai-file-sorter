@@ -82,14 +82,35 @@ void PromptTemplateStore::set_prompt_template(std::string value)
 std::string PromptTemplateStore::default_template()
 {
     return
-        "You are a file categorization assistant. Classify the current item for filesystem organization.\n"
-        "Item type: {{item_type}}\n"
-        "File name: {{filename}}\n"
-        "Path: {{path}}\n"
-        "Use the filename, extension, path, and any document/image summary supplied in the user message.\n"
-        "Respect any allowed-category or consistency constraints in this context:\n{{context}}\n"
-        "Do not invent files, paths, categories outside explicit constraints, or extra operations.\n"
-        "Return exactly one line in this format: {{output_format}}";
+        "You are organizing one selected filesystem folder in a single batch.\n"
+        "Treat the supplied inventory as the complete source of truth.\n"
+        "Folder: {{folder_path}}\n"
+        "Recursive scan: {{recursive}}\n"
+        "Items: {{item_count}}\n"
+        "Requested category language: {{category_language}}\n\n"
+        "Categorization constraints:\n{{context}}\n"
+        "Inventory JSON (the numeric id is the only source identifier you may return):\n"
+        "{{inventory_json}}\n\n"
+        "Return JSON only, with exactly this shape:\n{{output_schema}}\n\n"
+        "Concrete example:\n"
+        "Input inventory:\n"
+        "[{\"id\":0,\"relative_path\":\"paper.pdf\",\"name\":\"paper.pdf\",\"type\":\"file\",\"extension\":\".pdf\"},"
+        "{\"id\":1,\"relative_path\":\"meeting-notes.docx\",\"name\":\"meeting-notes.docx\",\"type\":\"file\",\"extension\":\".docx\"}]\n"
+        "Valid response:\n"
+        "{\"items\":["
+        "{\"id\":0,\"category\":\"Research\",\"subcategory\":\"Papers\",\"suggested_name\":\"\"},"
+        "{\"id\":1,\"category\":\"Meetings\",\"subcategory\":\"Notes\",\"suggested_name\":\"\"}"
+        "]}\n"
+        "The first non-whitespace character of your reply must be { and the last must be }.\n"
+        "Rules:\n"
+        "1. Return every input id exactly once. Never invent an id and never omit an id.\n"
+        "2. Do not return source paths, destination paths, delete operations, overwrite operations, or shell commands.\n"
+        "3. category and subcategory are directory labels, not paths. Do not use /, \\, . or .. as path components.\n"
+        "4. suggested_name is optional. If used, it must be a filename only, never a path.\n"
+        "5. Base categorization on the whole folder context so related files use coherent categories.\n"
+        "6. If no whitelist forbids it and no suitable destination folder exists, you may propose a new category/subcategory label. "
+        "The application will create that folder only after the user reviews and approves the plan.\n"
+        "7. Do not wrap the JSON in Markdown fences or add explanation.";
 }
 
 bool PromptTemplateStore::save()
@@ -110,21 +131,54 @@ bool PromptTemplateStore::save()
 }
 
 std::string PromptTemplateStore::render_or_default(std::string_view original_prompt,
-                                                   const std::string& file_name,
-                                                   const std::string& file_path,
-                                                   FileType file_type,
-                                                   const std::string& context)
+                                                   const std::string&,
+                                                   const std::string&,
+                                                   FileType,
+                                                   const std::string&)
+{
+    // The editable prompt is now the folder-batch prompt. Keep the legacy
+    // per-item pipeline untouched for headless/backward-compatible workflows.
+    return std::string(original_prompt);
+}
+
+std::string PromptTemplateStore::render_batch(const std::string& folder_path,
+                                              const std::string& inventory_json,
+                                              bool recursive,
+                                              const std::string& category_language,
+                                              const std::string& context,
+                                              std::size_t item_count)
 {
     std::scoped_lock lock(g_mutex);
-    if (!g_enabled) {
-        return std::string(original_prompt);
-    }
+    std::string rendered = (g_enabled && !g_template.empty())
+        ? g_template
+        : default_template();
 
-    std::string rendered = g_template.empty() ? default_template() : g_template;
-    replace_all(rendered, "{{filename}}", file_name);
-    replace_all(rendered, "{{path}}", file_path);
-    replace_all(rendered, "{{item_type}}", file_type == FileType::Directory ? "directory" : "file");
+    // Keep the inventory and machine-readable contract mandatory even when a
+    // user has an older/custom prompt that omits the new batch variables.
+    if (rendered.find("{{inventory_json}}") == std::string::npos) {
+        rendered += "\n\nComplete folder inventory (mandatory source of truth):\n{{inventory_json}}";
+    }
+    if (rendered.find("{{output_schema}}") == std::string::npos) {
+        rendered += "\n\nReturn JSON only using this schema:\n{{output_schema}}";
+    }
+    rendered +=
+        "\n\nMandatory output contract:\n"
+        "- Reply with JSON only. No prose, no Markdown fence, no analysis before or after the JSON.\n"
+        "- The first non-whitespace character must be { and the last must be }.\n"
+        "- Exact shape: {\"items\":[{\"id\":0,\"category\":\"Documents\",\"subcategory\":\"Reports\",\"suggested_name\":\"\"}]}\n"
+        "- Example for two items: {\"items\":[{\"id\":0,\"category\":\"Research\",\"subcategory\":\"Papers\",\"suggested_name\":\"\"},{\"id\":1,\"category\":\"Meetings\",\"subcategory\":\"Notes\",\"suggested_name\":\"\"}]}\n"
+        "- Use only input numeric ids; return each selected id at most once.\n"
+        "- Never invent source paths, destination paths, delete operations, overwrite operations, or shell commands.";
+
+    replace_all(rendered, "{{folder_path}}", folder_path);
+    replace_all(rendered, "{{inventory_json}}", inventory_json);
+    replace_all(rendered, "{{recursive}}", recursive ? "true" : "false");
+    replace_all(rendered, "{{category_language}}", category_language);
     replace_all(rendered, "{{context}}", context);
-    replace_all(rendered, "{{output_format}}", "<Main category> : <Subcategory>");
+    replace_all(rendered, "{{item_count}}", std::to_string(item_count));
+    replace_all(rendered,
+                "{{output_schema}}",
+                "{\"items\":[{\"id\":0,\"category\":\"Documents\","
+                "\"subcategory\":\"Reports\",\"suggested_name\":\"\"}]}");
     return rendered;
 }

@@ -50,3 +50,20 @@ TEST_CASE("Missing sources alone do not block safe apply")
     REQUIRE(report.count(IntegrityIssueKind::MissingSource) == 1);
     REQUIRE_FALSE(report.has_blocking_issues());
 }
+
+
+TEST_CASE("Unsafe path-like categories block processing")
+{
+    TempDir temp;
+    const auto root = temp.path();
+    std::vector<FileEntry> snapshot{
+        {(root / "a.txt").string(), "a.txt", FileType::File},
+    };
+    CategorizedFile proposed{root.string(), "a.txt", FileType::File, "../escape", "", 0};
+
+    const auto report = ResultIntegrityValidator::validate(
+        snapshot, {proposed}, root.string(), false);
+
+    REQUIRE(report.count(IntegrityIssueKind::UnsafeTarget) == 1);
+    REQUIRE(report.has_blocking_issues());
+}

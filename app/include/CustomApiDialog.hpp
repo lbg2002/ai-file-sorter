@@ -53,6 +53,10 @@ private:
      * @brief Validate inputs and update the ok button state.
      */
     void validate_inputs();
+    /**
+     * @brief Send a small request through the configured OpenAI-compatible endpoint.
+     */
+    void test_connection();
 
     QLineEdit* name_edit{nullptr};
     QTextEdit* description_edit{nullptr};
@@ -61,6 +65,7 @@ private:
     QLineEdit* api_key_edit{nullptr};
     QCheckBox* show_api_key_checkbox{nullptr};
     QPushButton* ok_button{nullptr};
+    QPushButton* test_connection_button{nullptr};
 };
 
 #endif // CUSTOMAPIDIALOG_HPP

@@ -1,10 +1,14 @@
 #include "CustomApiDialog.hpp"
+#include "AppTheme.hpp"
+#include "LLMClient.hpp"
 
+#include <QApplication>
 #include <QCheckBox>
 #include <QDialogButtonBox>
 #include <QFormLayout>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QMessageBox>
 #include <QLineEdit>
 #include <QPushButton>
 #include <QTextEdit>
@@ -13,6 +17,7 @@
 CustomApiDialog::CustomApiDialog(QWidget* parent)
     : QDialog(parent)
 {
+    setStyleSheet(AppTheme::utility_dialog_style_sheet(palette()));
     setup_ui();
     wire_signals();
 }
@@ -20,6 +25,7 @@ CustomApiDialog::CustomApiDialog(QWidget* parent)
 CustomApiDialog::CustomApiDialog(QWidget* parent, const CustomApiEndpoint& existing)
     : QDialog(parent)
 {
+    setStyleSheet(AppTheme::utility_dialog_style_sheet(palette()));
     setup_ui();
     wire_signals();
     apply_existing(existing);
@@ -63,6 +69,13 @@ void CustomApiDialog::setup_ui()
     hint->setWordWrap(true);
     layout->addWidget(hint);
 
+    auto* test_row = new QHBoxLayout();
+    test_connection_button = new QPushButton(tr("Test connection"), this);
+    test_connection_button->setEnabled(false);
+    test_row->addWidget(test_connection_button);
+    test_row->addStretch(1);
+    layout->addLayout(test_row);
+
     auto* button_box = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
     ok_button = button_box->button(QDialogButtonBox::Ok);
     ok_button->setEnabled(false);
@@ -77,6 +90,10 @@ void CustomApiDialog::wire_signals()
     connect(name_edit, &QLineEdit::textChanged, this, &CustomApiDialog::validate_inputs);
     connect(base_url_edit, &QLineEdit::textChanged, this, &CustomApiDialog::validate_inputs);
     connect(model_edit, &QLineEdit::textChanged, this, &CustomApiDialog::validate_inputs);
+    if (test_connection_button) {
+        connect(test_connection_button, &QPushButton::clicked,
+                this, &CustomApiDialog::test_connection);
+    }
     if (show_api_key_checkbox) {
         connect(show_api_key_checkbox, &QCheckBox::toggled, this, [this](bool checked) {
             if (api_key_edit) {
@@ -104,6 +121,50 @@ void CustomApiDialog::validate_inputs()
     if (ok_button) {
         ok_button->setEnabled(valid);
     }
+    if (test_connection_button) {
+        test_connection_button->setEnabled(valid);
+    }
+}
+
+void CustomApiDialog::test_connection()
+{
+    validate_inputs();
+    if (!test_connection_button || !test_connection_button->isEnabled()) {
+        return;
+    }
+
+    test_connection_button->setEnabled(false);
+    test_connection_button->setText(tr("Testing…"));
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+    QApplication::processEvents();
+
+    try {
+        LLMClient client(
+            api_key_edit->text().trimmed().toStdString(),
+            model_edit->text().trimmed().toStdString(),
+            base_url_edit->text().trimmed().toStdString(),
+            20L);
+
+        const std::string reply = client.complete_prompt(
+            "Do not spend output tokens on reasoning. Return exactly this JSON object and nothing else: {\"ok\":true}",
+            1024);
+
+        QMessageBox::information(
+            this,
+            tr("Connection successful"),
+            tr("The endpoint responded successfully. Model reply:\n%1")
+                .arg(QString::fromStdString(reply).left(500)));
+    } catch (const std::exception& ex) {
+        QMessageBox::warning(
+            this,
+            tr("Connection failed"),
+            tr("Could not complete a test request.\n\n%1")
+                .arg(QString::fromUtf8(ex.what())));
+    }
+
+    QApplication::restoreOverrideCursor();
+    test_connection_button->setText(tr("Test connection"));
+    validate_inputs();
 }
 
 CustomApiEndpoint CustomApiDialog::result() const

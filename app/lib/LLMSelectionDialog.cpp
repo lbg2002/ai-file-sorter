@@ -1,4 +1,5 @@
 #include "LLMSelectionDialog.hpp"
+#include "AppTheme.hpp"
 
 #include "AppIconResources.hpp"
 #include "DialogUtils.hpp"
@@ -152,6 +153,8 @@ LLMSelectionDialog::LLMSelectionDialog(Settings& settings, QWidget* parent)
     , model_storage_dir_(settings.get_llm_storage_dir())
     , original_model_storage_dir_(settings.get_llm_storage_dir())
 {
+    setObjectName(QStringLiteral("fileSortGuardUtilityDialog"));
+    setStyleSheet(AppTheme::utility_dialog_style_sheet(palette()));
     apply_model_storage_dir_override();
 
     QIcon icon = QApplication::windowIcon();
@@ -399,10 +402,11 @@ void LLMSelectionDialog::setup_ui()
     openai_inputs->setVisible(false);
 
     custom_api_radio = new QRadioButton(
-        tr("Custom OpenAI-compatible API (advanced)"), radio_container);
+        tr("Custom OpenAI-compatible API (vLLM / Ollama / LM Studio / other)"), radio_container);
     custom_api_radio->setStyleSheet(QStringLiteral("color: #1f6feb;"));
     auto* custom_api_desc = new QLabel(
-        tr("Use OpenAI-compatible endpoints such as LM Studio or Ollama (local or remote)."),
+        tr("Set a custom base URL, model name, and optional API key. "
+           "The folder-batch workflow sends one OpenAI-compatible chat request to this endpoint."),
         radio_container);
     custom_api_desc->setWordWrap(true);
     auto* custom_api_row = new QWidget(radio_container);

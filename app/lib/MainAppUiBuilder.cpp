@@ -347,18 +347,29 @@ void MainAppUiBuilder::build_central_panel(MainApp& app) {
     app.resize(1000, 800);
 
     QWidget* central = new QWidget(&app);
+    central->setObjectName(QStringLiteral("aifsMainSurface"));
     auto* main_layout = new QVBoxLayout(central);
-    main_layout->setContentsMargins(12, 12, 12, 12);
-    main_layout->setSpacing(8);
+    main_layout->setContentsMargins(18, 18, 18, 18);
+    main_layout->setSpacing(12);
 
-    auto* path_layout = new QHBoxLayout();
+    auto* path_card = new QFrame(central);
+    path_card->setObjectName(QStringLiteral("aifsCard"));
+    auto* path_layout = new QHBoxLayout(path_card);
+    path_layout->setContentsMargins(14, 12, 14, 12);
+    path_layout->setSpacing(10);
     app.path_label = new QLabel(central);
     app.path_entry = new QLineEdit(central);
     app.browse_button = new QPushButton(central);
     path_layout->addWidget(app.path_label);
     path_layout->addWidget(app.path_entry, 1);
     path_layout->addWidget(app.browse_button);
-    main_layout->addLayout(path_layout);
+    main_layout->addWidget(path_card);
+
+    auto* scan_card = new QFrame(central);
+    scan_card->setObjectName(QStringLiteral("aifsCard"));
+    auto* scan_card_layout = new QVBoxLayout(scan_card);
+    scan_card_layout->setContentsMargins(14, 12, 14, 12);
+    scan_card_layout->setSpacing(8);
 
     auto* options_layout = new QHBoxLayout();
     app.use_subcategories_checkbox = new QCheckBox(central);
@@ -371,7 +382,7 @@ void MainAppUiBuilder::build_central_panel(MainApp& app) {
     options_layout->addWidget(app.categorize_directories_checkbox);
     options_layout->addWidget(app.include_subdirectories_checkbox);
     options_layout->addStretch(1);
-    main_layout->addLayout(options_layout);
+    scan_card_layout->addLayout(options_layout);
 
     auto* document_options_layout = new QVBoxLayout();
     document_options_layout->setContentsMargins(0, 0, 0, 0);
@@ -401,7 +412,7 @@ void MainAppUiBuilder::build_central_panel(MainApp& app) {
     document_rename_layout->addWidget(app.add_document_date_to_category_checkbox);
     app.document_options_container->setVisible(false);
     document_options_layout->addWidget(app.document_options_container);
-    main_layout->addLayout(document_options_layout);
+    scan_card_layout->addLayout(document_options_layout);
 
     auto* image_options_layout = new QVBoxLayout();
     image_options_layout->setContentsMargins(0, 0, 0, 0);
@@ -433,23 +444,52 @@ void MainAppUiBuilder::build_central_panel(MainApp& app) {
     image_rename_layout->addWidget(app.rename_images_only_checkbox);
     app.image_options_container->setVisible(false);
     image_options_layout->addWidget(app.image_options_container);
-    main_layout->addLayout(image_options_layout);
+    scan_card_layout->addLayout(image_options_layout);
 
     app.add_audio_video_metadata_to_filename_checkbox = new QCheckBox(central);
     auto* audio_video_row = new QHBoxLayout();
     audio_video_row->setContentsMargins(0, 0, 0, 0);
     audio_video_row->addWidget(app.add_audio_video_metadata_to_filename_checkbox);
     audio_video_row->addStretch(1);
-    main_layout->addLayout(audio_video_row);
+    scan_card_layout->addLayout(audio_video_row);
+    main_layout->addWidget(scan_card);
 
     app.organization_mode_heading = new QLabel(QObject::tr("Organization mode"), central);
-    app.organization_mode_ai_radio = new QRadioButton(QObject::tr("AI mode"), central);
-    app.organization_mode_rules_radio = new QRadioButton(QObject::tr("Rule mode"), central);
+    app.organization_mode_heading->setObjectName(QStringLiteral("aifsSectionTitle"));
+
+    // IMPORTANT: keep organization mode and categorization style radio buttons
+    // under different parent widgets. QRadioButton auto-exclusivity is parent-
+    // scoped; sharing the same parent caused selecting "refined/consistent" to
+    // silently uncheck AI/Rule mode and made Rule mode fall through to AI.
+    auto* organization_mode_selector = new QWidget(central);
+    organization_mode_selector->setObjectName(QStringLiteral("aifsModeSelector"));
+    auto* organization_mode_selector_layout = new QHBoxLayout(organization_mode_selector);
+    organization_mode_selector_layout->setContentsMargins(0, 0, 0, 0);
+    organization_mode_selector_layout->setSpacing(6);
+
+    app.organization_mode_ai_radio =
+        new QRadioButton(QObject::tr("AI mode (one request per folder)"), organization_mode_selector);
+    app.organization_mode_rules_radio =
+        new QRadioButton(QObject::tr("Rule mode"), organization_mode_selector);
+    app.organization_mode_ai_radio->setObjectName(QStringLiteral("aifsModeChoice"));
+    app.organization_mode_rules_radio->setObjectName(QStringLiteral("aifsModeChoice"));
+    organization_mode_selector_layout->addWidget(app.organization_mode_ai_radio);
+    organization_mode_selector_layout->addWidget(app.organization_mode_rules_radio);
     app.organization_mode_ai_radio->setChecked(true);
 
+    app.ai_model_button = new QPushButton(QObject::tr("AI model…"), central);
+    app.ai_model_button->setObjectName(QStringLiteral("aifsSecondaryButton"));
+
     app.categorization_style_heading = new QLabel(central);
-    app.categorization_style_refined_radio = new QRadioButton(central);
-    app.categorization_style_consistent_radio = new QRadioButton(central);
+    app.categorization_style_heading->setObjectName(QStringLiteral("aifsSectionTitle"));
+    auto* categorization_style_selector = new QWidget(central);
+    auto* categorization_style_selector_layout = new QHBoxLayout(categorization_style_selector);
+    categorization_style_selector_layout->setContentsMargins(0, 0, 0, 0);
+    categorization_style_selector_layout->setSpacing(8);
+    app.categorization_style_refined_radio = new QRadioButton(categorization_style_selector);
+    app.categorization_style_consistent_radio = new QRadioButton(categorization_style_selector);
+    categorization_style_selector_layout->addWidget(app.categorization_style_refined_radio);
+    categorization_style_selector_layout->addWidget(app.categorization_style_consistent_radio);
     app.use_whitelist_checkbox = new QCheckBox(central);
     app.whitelist_selector = new QComboBox(central);
     app.whitelist_selector->setEnabled(false);
@@ -466,6 +506,7 @@ void MainAppUiBuilder::build_central_panel(MainApp& app) {
     if (analyze_icon.isNull()) {
         analyze_icon = app.style()->standardIcon(QStyle::SP_MediaPlay);
     }
+    app.analyze_button->setObjectName(QStringLiteral("aifsPrimaryButton"));
     app.analyze_button->setIcon(analyze_icon);
     app.analyze_button->setIconSize(QSize(20, 20));
     app.analyze_button->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
@@ -473,15 +514,14 @@ void MainAppUiBuilder::build_central_panel(MainApp& app) {
     auto* analyze_layout = new QHBoxLayout();
     auto* categorization_layout = new QVBoxLayout();
     auto* organization_mode_row = new QHBoxLayout();
-    organization_mode_row->addWidget(app.organization_mode_ai_radio);
-    organization_mode_row->addWidget(app.organization_mode_rules_radio);
+    organization_mode_row->addWidget(organization_mode_selector);
+    organization_mode_row->addWidget(app.ai_model_button);
     organization_mode_row->addStretch();
     categorization_layout->addWidget(app.organization_mode_heading);
     categorization_layout->addLayout(organization_mode_row);
     categorization_layout->addSpacing(4);
     auto* toggle_row = new QHBoxLayout();
-    toggle_row->addWidget(app.categorization_style_refined_radio);
-    toggle_row->addWidget(app.categorization_style_consistent_radio);
+    toggle_row->addWidget(categorization_style_selector);
     toggle_row->addStretch();
     categorization_layout->addWidget(app.categorization_style_heading);
     categorization_layout->addLayout(toggle_row);
@@ -496,13 +536,31 @@ void MainAppUiBuilder::build_central_panel(MainApp& app) {
     control_block->addSpacing(4);
     control_block->addLayout(whitelist_row);
 
+    QObject::connect(app.ai_model_button, &QPushButton::clicked, &app, [&app]() {
+        if (app.organization_mode_rules_radio && app.organization_mode_rules_radio->isChecked()) {
+            app.show_rule_editor();
+        } else {
+            app.show_llm_selection_dialog();
+        }
+    });
     QObject::connect(app.organization_mode_rules_radio, &QRadioButton::toggled, &app, [&app](bool rules_mode) {
         const bool ai_mode = !rules_mode;
-        if (app.categorization_style_heading) app.categorization_style_heading->setEnabled(ai_mode);
-        if (app.categorization_style_refined_radio) app.categorization_style_refined_radio->setEnabled(ai_mode);
-        if (app.categorization_style_consistent_radio) app.categorization_style_consistent_radio->setEnabled(ai_mode);
-        if (app.use_whitelist_checkbox) app.use_whitelist_checkbox->setEnabled(ai_mode);
+        if (app.ai_model_button) {
+            app.ai_model_button->setEnabled(true);
+            app.ai_model_button->setText(QCoreApplication::translate(
+                "UiTranslator", rules_mode ? "Edit rules…" : "AI model…"));
+            app.ai_model_button->setToolTip(QCoreApplication::translate(
+                "UiTranslator",
+                rules_mode
+                    ? "Open the deterministic rule editor used by Rule mode."
+                    : "Choose or configure the AI model used for folder organization."));
+        }
+        if (app.categorization_style_heading) app.categorization_style_heading->setVisible(ai_mode);
+        if (app.categorization_style_refined_radio) app.categorization_style_refined_radio->setVisible(ai_mode);
+        if (app.categorization_style_consistent_radio) app.categorization_style_consistent_radio->setVisible(ai_mode);
+        if (app.use_whitelist_checkbox) app.use_whitelist_checkbox->setVisible(ai_mode);
         if (app.whitelist_selector) {
+            app.whitelist_selector->setVisible(ai_mode);
             app.whitelist_selector->setEnabled(ai_mode && app.use_whitelist_checkbox && app.use_whitelist_checkbox->isChecked());
         }
     });
@@ -510,7 +568,13 @@ void MainAppUiBuilder::build_central_panel(MainApp& app) {
     analyze_layout->addLayout(control_block);
     analyze_layout->addSpacing(12);
     analyze_layout->addWidget(app.analyze_button, 0, Qt::AlignBottom | Qt::AlignRight);
-    main_layout->addLayout(analyze_layout);
+
+    auto* organization_card = new QFrame(central);
+    organization_card->setObjectName(QStringLiteral("aifsCard"));
+    auto* organization_card_layout = new QVBoxLayout(organization_card);
+    organization_card_layout->setContentsMargins(14, 12, 14, 12);
+    organization_card_layout->addLayout(analyze_layout);
+    main_layout->addWidget(organization_card);
 
     app.tree_model = new QStandardItemModel(0, 5, &app);
 
@@ -567,6 +631,10 @@ UiTranslator::Dependencies MainAppUiBuilder::build_translator_dependencies(MainA
             app.browse_button,
             app.analyze_button,
             app.use_subcategories_checkbox,
+            app.organization_mode_heading,
+            app.organization_mode_ai_radio,
+            app.organization_mode_rules_radio,
+            app.ai_model_button,
             app.categorization_style_heading,
             app.categorization_style_refined_radio,
             app.categorization_style_consistent_radio,
@@ -615,6 +683,8 @@ UiTranslator::Dependencies MainAppUiBuilder::build_translator_dependencies(MainA
             app.delete_action,
             app.toggle_explorer_action,
             app.toggle_llm_action,
+            app.edit_prompt_action,
+            app.manage_rules_action,
             app.manage_storage_plugins_action,
             app.windows_explorer_extension_install_action,
             app.windows_explorer_extension_settings_action,

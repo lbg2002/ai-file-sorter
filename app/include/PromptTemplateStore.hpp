@@ -4,6 +4,7 @@
 
 #include <string>
 #include <string_view>
+#include <cstddef>
 
 class PromptTemplateStore {
 public:
@@ -20,4 +21,11 @@ public:
                                          const std::string& file_path,
                                          FileType file_type,
                                          const std::string& context);
+
+    static std::string render_batch(const std::string& folder_path,
+                                    const std::string& inventory_json,
+                                    bool recursive,
+                                    const std::string& category_language,
+                                    const std::string& context,
+                                    std::size_t item_count);
 };

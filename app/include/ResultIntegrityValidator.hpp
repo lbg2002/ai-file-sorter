@@ -10,7 +10,8 @@ enum class IntegrityIssueKind {
     DuplicateSource,
     MissingSource,
     UnknownSource,
-    TargetConflict
+    TargetConflict,
+    UnsafeTarget
 };
 
 struct IntegrityIssue {

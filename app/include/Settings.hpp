@@ -581,6 +581,10 @@ public:
      */
     Language get_language() const;
     /**
+     * @brief Returns true when the user has explicitly chosen an interface language.
+     */
+    bool has_explicit_language() const;
+    /**
      * @brief Sets the selected UI language.
      * @param value Interface language to store.
      */
@@ -721,6 +725,7 @@ private:
     std::string benchmark_last_report;
     std::string benchmark_last_run;
     Language language{Language::English};
+    bool explicit_language_selected{false};
     CategoryLanguage category_language{CategoryLanguage::English};
     bool consistency_pass_enabled{false};
     bool development_prompt_logging{false};

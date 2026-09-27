@@ -1,5 +1,7 @@
 #include "AppInfo.hpp"
 #include "AppTheme.hpp"
+#include "Language.hpp"
+#include "CategoryLanguage.hpp"
 #include "AppTestRunner.hpp"
 #include "EmbeddedEnv.hpp"
 #include "GgmlRuntimePaths.hpp"
@@ -10,6 +12,7 @@
 #include "LlmCatalog.hpp"
 #include "MainApp.hpp"
 #include "SingleInstanceCoordinator.hpp"
+#include "TranslationManager.hpp"
 #include "UpdaterBuildConfig.hpp"
 #include "UpdaterLaunchOptions.hpp"
 #include "UpdaterLiveTestConfig.hpp"
@@ -21,6 +24,8 @@
 #include <QApplication>
 #include <QCoreApplication>
 #include <QDialog>
+#include <QMessageBox>
+#include <QPushButton>
 #include <QGuiApplication>
 #include <QSplashScreen>
 #include <QPixmap>
@@ -500,6 +505,42 @@ bool llm_choice_is_ready(const Settings& settings)
     return builtin_llm_artifact_available(choice);
 }
 
+bool ensure_interface_language(Settings& settings)
+{
+    if (settings.has_explicit_language()) {
+        return true;
+    }
+
+    QMessageBox box;
+    box.setIcon(QMessageBox::Question);
+    box.setWindowTitle(QStringLiteral("Choose language / 选择语言"));
+    box.setText(QStringLiteral("Choose the interface language.\n请选择界面语言。"));
+    box.setInformativeText(QStringLiteral(
+        "You can change this later in Settings → Interface language.\n"
+        "稍后可在“设置 → 界面语言”中随时切换。"));
+
+    QPushButton* chinese = box.addButton(QStringLiteral("简体中文"), QMessageBox::AcceptRole);
+    QPushButton* english = box.addButton(QStringLiteral("English"), QMessageBox::AcceptRole);
+    if (settings.get_language() == Language::SimplifiedChinese) {
+        box.setDefaultButton(chinese);
+    } else {
+        box.setDefaultButton(english);
+    }
+
+    box.exec();
+    if (box.clickedButton() == chinese) {
+        settings.set_language(Language::SimplifiedChinese);
+        settings.set_category_language(CategoryLanguage::SimplifiedChinese);
+    } else if (box.clickedButton() == english) {
+        settings.set_language(Language::English);
+        settings.set_category_language(CategoryLanguage::English);
+    } else {
+        return false;
+    }
+
+    return settings.save();
+}
+
 bool ensure_llm_choice(Settings& settings, const std::function<void()>& finish_splash)
 {
     if (llm_choice_is_ready(settings)) {
@@ -783,6 +824,12 @@ int run_application(const ParsedArguments& parsed_args)
 
     Settings settings;
     settings.load();
+
+    if (!parsed_args.test_mode && !ensure_interface_language(settings)) {
+        return EXIT_SUCCESS;
+    }
+    TranslationManager::instance().initialize_for_app(&app, settings.get_language());
+
     std::string app_data_dir;
     if (parsed_args.test_mode) {
         const auto profile_dir = Utils::utf8_to_path(settings.get_config_dir()) / "test_mode_profile";

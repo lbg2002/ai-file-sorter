@@ -1,0 +1,110 @@
+name: Release FileSort Guard
+
+on:
+  workflow_run:
+    workflows: ["Build"]
+    types: [completed]
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  release:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      contains(github.event.workflow_run.head_commit.message, '[release:v1.9.2-fsg.1]')
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: v1.9.2-fsg.1
+      RELEASE_NAME: FileSort Guard v1.9.2-fsg.1
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check out released source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          submodules: false
+
+      - name: Download Build workflow artifacts
+        run: |
+          set -euo pipefail
+          mkdir -p downloaded
+          gh run download "${{ github.event.workflow_run.id }}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --dir downloaded
+
+      - name: Prepare release assets
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+          found=0
+
+          for artifact_dir in downloaded/*; do
+            [[ -d "$artifact_dir" ]] || continue
+            artifact_name="$(basename "$artifact_dir")"
+            platform="${artifact_name#aifilesorter-linux-}"
+
+            while IFS= read -r -d '' file; do
+              case "$file" in
+                *.deb)
+                  target="FileSortGuard-1.9.2-fsg.1-${platform}-amd64.deb"
+                  ;;
+                *.rpm)
+                  target="FileSortGuard-1.9.2-fsg.1-${platform}-x86_64.rpm"
+                  ;;
+                *.tar.zst)
+                  target="FileSortGuard-1.9.2-fsg.1-${platform}-x86_64.tar.zst"
+                  ;;
+                *)
+                  continue
+                  ;;
+              esac
+              cp "$file" "release-assets/$target"
+              found=1
+            done < <(find "$artifact_dir" -type f -print0)
+          done
+
+          if [[ "$found" != "1" ]]; then
+            echo "No package artifacts were found in Build workflow output." >&2
+            find downloaded -maxdepth 3 -type f -print || true
+            exit 1
+          fi
+
+          (
+            cd release-assets
+            sha256sum FileSortGuard-* > SHA256SUMS.txt
+          )
+          ls -lh release-assets
+
+      - name: Create GitHub Release
+        run: |
+          set -euo pipefail
+          cat > release-notes.md <<'EOF'
+          FileSort Guard v1.9.2-fsg.1 is the first packaged fork release based on upstream AI File Sorter 1.9.2.
+
+          Highlights:
+          - one AI request for the complete selected-folder inventory
+          - optional recursive folder scanning
+          - structured JSON result parsing and editable preview
+          - custom OpenAI-compatible endpoints, OpenAI, Gemini, custom GGUF and built-in local models
+          - editable folder-batch prompt
+          - deterministic Rule mode
+          - filesystem-snapshot safety validation before apply
+          - duplicate, missing, unknown-id, destination-conflict and unsafe-target review states
+
+          The source filesystem scan remains authoritative. AI output is treated only as a proposed organization plan.
+          EOF
+
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" release-assets/* \
+              --repo "$GITHUB_REPOSITORY" \
+              --clobber
+          else
+            gh release create "$RELEASE_TAG" release-assets/* \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "${{ github.event.workflow_run.head_sha }}" \
+              --title "$RELEASE_NAME" \
+              --notes-file release-notes.md
+          fi

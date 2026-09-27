@@ -30,6 +30,15 @@ std::string normalize_path(const std::string& value)
 #endif
 }
 
+bool safe_path_component(const std::string& value)
+{
+    if (value.empty() || value == "." || value == "..") {
+        return false;
+    }
+    return value.find('/') == std::string::npos &&
+           value.find('\\') == std::string::npos;
+}
+
 std::string destination_name_for(const CategorizedFile& file)
 {
     if (file.suggested_name.empty() || file.suggested_name == file.file_name) {
@@ -51,7 +60,8 @@ bool ResultIntegrityReport::has_blocking_issues() const
     return std::any_of(issues.begin(), issues.end(), [](const IntegrityIssue& issue) {
         return issue.kind == IntegrityIssueKind::DuplicateSource ||
                issue.kind == IntegrityIssueKind::UnknownSource ||
-               issue.kind == IntegrityIssueKind::TargetConflict;
+               issue.kind == IntegrityIssueKind::TargetConflict ||
+               issue.kind == IntegrityIssueKind::UnsafeTarget;
     });
 }
 
@@ -119,6 +129,20 @@ ResultIntegrityReport ResultIntegrityValidator::validate(const std::vector<FileE
                 {},
                 "The result references a source item that was not present in the scan snapshot."
             });
+        }
+
+        if (!result.rename_only) {
+            if (!safe_path_component(result.category) ||
+                (use_subcategories && !result.subcategory.empty() &&
+                 !safe_path_component(result.subcategory))) {
+                report.issues.push_back({
+                    IntegrityIssueKind::UnsafeTarget,
+                    source,
+                    {},
+                    "The proposed category contains an empty or path-like destination component."
+                });
+                continue;
+            }
         }
 
         const std::string target = target_path_for(result, base_dir, use_subcategories);
