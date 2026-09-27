@@ -4,7 +4,6 @@
 #include "AppTheme.hpp"
 
 #include <QCheckBox>
-#include <QCoreApplication>
 #include <QDialogButtonBox>
 #include <QHeaderView>
 #include <QLabel>
@@ -13,19 +12,12 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 
-namespace {
-QString rule_editor_tr(const char* source)
-{
-    return QCoreApplication::translate("RuleEditorDialog", source);
-}
-}
-
 RuleEditorDialog::RuleEditorDialog(QWidget* parent)
     : QDialog(parent)
 {
     setObjectName(QStringLiteral("fileSortGuardUtilityDialog"));
     setStyleSheet(AppTheme::utility_dialog_style_sheet(palette()));
-    setWindowTitle(rule_editor_tr("File Rules"));
+    setWindowTitle(tr("File Rules"));
     resize(880, 520);
 
     auto* layout = new QVBoxLayout(this);
