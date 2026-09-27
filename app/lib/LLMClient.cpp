@@ -1,4 +1,5 @@
 #include "LLMClient.hpp"
+#include "PromptTemplateStore.hpp"
 #include "Types.hpp"
 #include "Utils.hpp"
 #include "Logger.hpp"
@@ -379,13 +380,15 @@ std::string LLMClient::make_payload(const std::string& file_name,
 
     last_prompt = prompt;
     const std::string escaped_prompt = escape_json(prompt);
-    const std::string system_prompt =
+    const std::string default_system_prompt =
         "You are a file categorization assistant. If it's an installer, describe the type of software it installs. "
         "Consider the filename, extension, and any directory context provided. If the user prompt includes an "
         "'Allowed main categories' list, choose the main category from that list only. Use Other only when it is "
         "listed and none of the other listed main categories clearly fits. Always reply with one line in the "
         "format <Main category> : <Subcategory>. Main category must be broad (one or two words, plural). "
         "Subcategory must be specific, relevant, and must not repeat the main category.";
+    const std::string system_prompt = PromptTemplateStore::render_or_default(
+        default_system_prompt, file_name, file_path, file_type, consistency_context);
     const std::string escaped_system = escape_json(system_prompt);
 
     std::ostringstream payload;
