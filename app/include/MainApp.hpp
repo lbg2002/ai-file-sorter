@@ -417,6 +417,7 @@ private:
     void show_prompt_editor();
     void show_rule_editor();
     void run_rule_mode();
+    void perform_batch_ai_analysis();
     void apply_whitelist_to_selector();
     /**
      * @brief Returns the menu action corresponding to a category language.
@@ -480,6 +481,7 @@ private:
     QPointer<QLabel> organization_mode_heading;
     QPointer<QRadioButton> organization_mode_ai_radio;
     QPointer<QRadioButton> organization_mode_rules_radio;
+    QPointer<QPushButton> ai_model_button;
     QPointer<QLabel> categorization_style_heading;
     QPointer<QRadioButton> categorization_style_refined_radio;
     QPointer<QRadioButton> categorization_style_consistent_radio;
