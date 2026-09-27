@@ -352,8 +352,14 @@ std::string parse_category_response(const std::string& payload,
 }
 
 
-LLMClient::LLMClient(std::string api_key, std::string model, std::string base_url)
-    : api_key(std::move(api_key)), model(std::move(model)), base_url(std::move(base_url))
+LLMClient::LLMClient(std::string api_key,
+                     std::string model,
+                     std::string base_url,
+                     long timeout_override_seconds)
+    : api_key(std::move(api_key)),
+      model(std::move(model)),
+      base_url(std::move(base_url)),
+      timeout_override_seconds_(timeout_override_seconds)
 {}
 
 
@@ -381,7 +387,9 @@ std::string LLMClient::send_api_request(std::string json_payload) {
                               api_url,
                               json_payload,
                               api_key,
-                              resolve_timeout_seconds(base_url),
+                              timeout_override_seconds_ > 0
+                                  ? timeout_override_seconds_
+                                  : resolve_timeout_seconds(base_url),
                               response_string,
                               retry_after_header);
 
