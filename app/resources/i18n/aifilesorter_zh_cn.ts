@@ -305,6 +305,54 @@
         <source>Not selected</source>
         <translation>未选择</translation>
     </message>
+    <message>
+        <source>Safety check: %1 duplicate source(s), %2 missing item(s), %3 unknown source(s), %4 destination conflict(s), %5 unsafe target(s). Missing items remain in their original location. Duplicate, unknown, destination-conflict, or unsafe-target rows must be resolved before processing.</source>
+        <translation>安全检查：%1 个重复源文件，%2 个遗漏项目，%3 个未知源文件，%4 个目标路径冲突，%5 个不安全目标。遗漏项目将保留在原位置。重复、未知、目标冲突或不安全目标必须在执行前处理。</translation>
+    </message>
+    <message>
+        <source>Duplicate source</source>
+        <translation>重复源文件</translation>
+    </message>
+    <message>
+        <source>Missing from result</source>
+        <translation>结果中遗漏</translation>
+    </message>
+    <message>
+        <source>Unknown source</source>
+        <translation>未知源文件</translation>
+    </message>
+    <message>
+        <source>Destination conflict</source>
+        <translation>目标路径冲突</translation>
+    </message>
+    <message>
+        <source>Unsafe target</source>
+        <translation>不安全目标</translation>
+    </message>
+    <message>
+        <source>Processing is disabled while blocking safety anomalies are present.</source>
+        <translation>存在阻断性安全异常时，禁止执行整理。</translation>
+    </message>
+    <message>
+        <source>Safety check blocked processing</source>
+        <translation>安全检查已阻止执行</translation>
+    </message>
+    <message>
+        <source>The selected operations still contain unsafe AI output:
+Duplicate sources: %1
+Unknown sources: %2
+Destination conflicts: %3
+Unsafe targets: %4
+
+Edit the affected category/name, or deselect one side of a duplicate/conflict, then try again.</source>
+        <translation>所选操作中仍包含不安全的 AI 输出：
+重复源文件：%1
+未知源文件：%2
+目标路径冲突：%3
+不安全目标：%4
+
+请修改受影响的类别或文件名，或取消选择重复/冲突项的一方，然后重试。</translation>
+    </message>
 </context>
 <context>
     <name>CategorizationProgressDialog</name>
@@ -966,6 +1014,14 @@ Supports: Nvidia (CUDA), Apple (Metal), CPU.</source>
         <source>Custom: %1</source>
         <translation>自定义：%1</translation>
     </message>
+    <message>
+        <source>Custom OpenAI-compatible API (vLLM / Ollama / LM Studio / other)</source>
+        <translation>自定义 OpenAI 兼容 API（vLLM / Ollama / LM Studio / 其他）</translation>
+    </message>
+    <message>
+        <source>Set a custom base URL, model name, and optional API key. The folder-batch workflow sends one OpenAI-compatible chat request to this endpoint.</source>
+        <translation>设置自定义 Base URL、模型名称和可选 API Key。文件夹批处理会向该端点发送一次 OpenAI 兼容的聊天请求。</translation>
+    </message>
 </context>
 <context>
     <name>MainApp</name>
@@ -1524,6 +1580,18 @@ Expected broad categories:
         <location filename="../../lib/MainApp.cpp" line="3087"/>
         <source>Image analysis failed to start with the GPU backend.</source>
         <translation>图像分析无法从 GPU 后端启动。</translation>
+    </message>
+    <message>
+        <source>Rule mode</source>
+        <translation>规则模式</translation>
+    </message>
+    <message>
+        <source>No rules are configured. Add at least one rule from Settings -&gt; Manage File Rules.</source>
+        <translation>尚未配置规则。请在“设置 → 管理文件规则”中至少添加一条规则。</translation>
+    </message>
+    <message>
+        <source>No scanned items matched the configured rules. No files were changed.</source>
+        <translation>扫描到的项目均未匹配已配置规则，没有文件被修改。</translation>
     </message>
 </context>
 <context>
@@ -2514,7 +2582,7 @@ Please update to continue. If you choose to quit, the application will close.</s
     <message>
         <location filename="../../lib/UiTranslator.cpp" line="46"/>
         <source>&amp;Quit</source>
-        <translation>&amp;辞职</translation>
+        <translation>&amp;退出</translation>
     </message>
     <message>
         <location filename="../../lib/UiTranslator.cpp" line="48"/>
@@ -3008,6 +3076,42 @@ Please update to continue. If you choose to quit, the application will close.</s
         <source>&amp;Simplified Chinese</source>
         <translation>&amp;简体中文</translation>
     </message>
+    <message>
+        <source>Organization mode</source>
+        <translation>整理模式</translation>
+    </message>
+    <message>
+        <source>AI mode (one request per folder)</source>
+        <translation>AI 模式（每个文件夹一次请求）</translation>
+    </message>
+    <message>
+        <source>Send the selected folder inventory to the chosen AI model in one structured request.</source>
+        <translation>将所选文件夹的文件清单通过一次结构化请求发送给选定的 AI 模型。</translation>
+    </message>
+    <message>
+        <source>Rule mode</source>
+        <translation>规则模式</translation>
+    </message>
+    <message>
+        <source>Organize files with deterministic rules without calling an AI model.</source>
+        <translation>使用确定性规则整理文件，不调用 AI 模型。</translation>
+    </message>
+    <message>
+        <source>AI model…</source>
+        <translation>AI 模型…</translation>
+    </message>
+    <message>
+        <source>Choose or configure the AI model used for folder organization.</source>
+        <translation>选择或配置用于文件夹整理的 AI 模型。</translation>
+    </message>
+    <message>
+        <source>Edit AI Prompt…</source>
+        <translation>编辑 AI 提示词…</translation>
+    </message>
+    <message>
+        <source>Manage File Rules…</source>
+        <translation>管理文件规则…</translation>
+    </message>
 </context>
 <context>
     <name>WhitelistManagerDialog</name>
@@ -3040,6 +3144,84 @@ Please update to continue. If you choose to quit, the application will close.</s
         <location filename="../../lib/WhitelistManagerDialog.cpp" line="295"/>
         <source>The default list cannot be removed.</source>
         <translation>无法删除默认列表。</translation>
+    </message>
+</context>
+<context>
+    <name>PromptEditorDialog</name>
+    <message>
+        <source>AI Prompt Editor</source>
+        <translation>AI 提示词编辑器</translation>
+    </message>
+    <message>
+        <source>Edit the prompt used for one-request folder AI organization. Supported variables: {{folder_path}}, {{inventory_json}}, {{recursive}}, {{item_count}}, {{category_language}}, {{context}}, {{output_schema}}. The model receives the whole selected folder inventory in one request.</source>
+        <translation>编辑用于“单次请求整理整个文件夹”的 AI 提示词。支持变量：{{folder_path}}、{{inventory_json}}、{{recursive}}、{{item_count}}、{{category_language}}、{{context}}、{{output_schema}}。模型会在一次请求中接收所选文件夹的完整文件清单。</translation>
+    </message>
+    <message>
+        <source>Enable custom prompt override</source>
+        <translation>启用自定义提示词</translation>
+    </message>
+    <message>
+        <source>Restore default</source>
+        <translation>恢复默认</translation>
+    </message>
+    <message>
+        <source>Preview rendered prompt</source>
+        <translation>预览最终提示词</translation>
+    </message>
+    <message>
+        <source>Could not save the prompt override.</source>
+        <translation>无法保存自定义提示词。</translation>
+    </message>
+    <message>
+        <source>Rendered prompt preview</source>
+        <translation>最终提示词预览</translation>
+    </message>
+</context>
+<context>
+    <name>RuleEditorDialog</name>
+    <message>
+        <source>File Rules</source>
+        <translation>文件规则</translation>
+    </message>
+    <message>
+        <source>Rules run top-to-bottom; the first match wins. Fields: extension, filename, path, size. Operators: equals, contains, regex, startswith, endswith, &gt;, &lt;. Example: extension / equals / .pdf / Documents / PDF.</source>
+        <translation>规则按从上到下的顺序执行，首个匹配规则生效。字段：扩展名、文件名、路径、大小。操作符：等于、包含、正则、开头匹配、结尾匹配、&gt;、&lt;。示例：extension / equals / .pdf / Documents / PDF。</translation>
+    </message>
+    <message>
+        <source>Enabled</source>
+        <translation>启用</translation>
+    </message>
+    <message>
+        <source>Field</source>
+        <translation>字段</translation>
+    </message>
+    <message>
+        <source>Operator</source>
+        <translation>操作符</translation>
+    </message>
+    <message>
+        <source>Value</source>
+        <translation>值</translation>
+    </message>
+    <message>
+        <source>Category</source>
+        <translation>类别</translation>
+    </message>
+    <message>
+        <source>Subcategory</source>
+        <translation>子类别</translation>
+    </message>
+    <message>
+        <source>Add rule</source>
+        <translation>添加规则</translation>
+    </message>
+    <message>
+        <source>Remove selected</source>
+        <translation>删除所选规则</translation>
+    </message>
+    <message>
+        <source>Could not save rules.</source>
+        <translation>无法保存规则。</translation>
     </message>
 </context>
 </TS>
