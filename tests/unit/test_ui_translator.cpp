@@ -43,6 +43,10 @@ struct UiTranslatorTestHarness {
     QPointer<QPushButton> browse_button{new QPushButton(&window)};
     QPointer<QPushButton> analyze_button{new QPushButton(&window)};
     QPointer<QCheckBox> subcategories_checkbox{new QCheckBox(&window)};
+    QPointer<QLabel> organization_mode_heading{new QLabel(&window)};
+    QPointer<QRadioButton> organization_mode_ai_radio{new QRadioButton(&window)};
+    QPointer<QRadioButton> organization_mode_rules_radio{new QRadioButton(&window)};
+    QPointer<QPushButton> ai_model_button{new QPushButton(&window)};
     QPointer<QLabel> style_heading{new QLabel(&window)};
     QPointer<QRadioButton> style_refined{new QRadioButton(&window)};
     QPointer<QRadioButton> style_consistent{new QRadioButton(&window)};
@@ -91,6 +95,8 @@ struct UiTranslatorTestHarness {
     QAction* delete_action = new QAction(&window);
     QAction* toggle_explorer_action = new QAction(&window);
     QAction* toggle_llm_action = new QAction(&window);
+    QAction* edit_prompt_action = new QAction(&window);
+    QAction* manage_rules_action = new QAction(&window);
     QAction* manage_storage_plugins_action = new QAction(&window);
     QAction* windows_explorer_extension_install_action = new QAction(&window);
     QAction* windows_explorer_extension_settings_action = new QAction(&window);
@@ -245,6 +251,10 @@ struct UiTranslatorTestHarness {
                 browse_button,
                 analyze_button,
                 subcategories_checkbox,
+                organization_mode_heading,
+                organization_mode_ai_radio,
+                organization_mode_rules_radio,
+                ai_model_button,
                 style_heading,
                 style_refined,
                 style_consistent,
@@ -293,6 +303,8 @@ struct UiTranslatorTestHarness {
                 delete_action,
                 toggle_explorer_action,
                 toggle_llm_action,
+                edit_prompt_action,
+                manage_rules_action,
                 manage_storage_plugins_action,
                 windows_explorer_extension_install_action,
                 windows_explorer_extension_settings_action,
@@ -359,6 +371,10 @@ void verify_primary_controls(const UiTranslatorTestHarness& h)
     REQUIRE(h.browse_button->text() == QStringLiteral("Browse…"));
     REQUIRE(h.analyze_button->text() == QStringLiteral("Analyze folder"));
     REQUIRE(h.subcategories_checkbox->text() == QStringLiteral("Use subcategories"));
+    REQUIRE(h.organization_mode_heading->text() == QStringLiteral("Organization mode"));
+    REQUIRE(h.organization_mode_ai_radio->text() == QStringLiteral("AI mode (one request per folder)"));
+    REQUIRE(h.organization_mode_rules_radio->text() == QStringLiteral("Rule mode"));
+    REQUIRE(h.ai_model_button->text() == QStringLiteral("AI model…"));
     REQUIRE(h.style_heading->text() == QStringLiteral("Categorization type"));
     REQUIRE(h.style_refined->text() == QStringLiteral("More refined"));
     REQUIRE(h.style_consistent->text() == QStringLiteral("More consistent"));
