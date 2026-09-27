@@ -192,7 +192,8 @@ mkdir -p \
     "$PKG_ROOT/opt/aifilesorter/bin" \
     "$PKG_ROOT/opt/aifilesorter/lib" \
     "$PKG_ROOT/opt/aifilesorter/certs" \
-    "$PKG_ROOT/usr/bin"
+    "$PKG_ROOT/usr/bin" \
+    "$PKG_ROOT/usr/share/applications"
 
 install -m 0755 "$BIN_PATH" "$PKG_ROOT/opt/aifilesorter/bin/aifilesorter-bin"
 ln -sf aifilesorter-bin "$PKG_ROOT/opt/aifilesorter/bin/aifilesorter"
@@ -320,6 +321,22 @@ python3 "$SCRIPT_DIR/gen_run_wrapper.py" \
 chmod 0755 "$PKG_ROOT/usr/bin/run_aifilesorter.sh"
 ln -sf run_aifilesorter.sh "$PKG_ROOT/usr/bin/aifilesorter"
 
+DESKTOP_FILE="$PKG_ROOT/usr/share/applications/filesort-guard.desktop"
+cat > "$DESKTOP_FILE" <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=FileSort Guard
+GenericName=Intelligent File Organizer
+Comment=Organize files with AI or deterministic rules
+Exec=aifilesorter
+Icon=folder
+Terminal=false
+Categories=Utility;FileTools;
+Keywords=file;organizer;sort;AI;folder;
+StartupNotify=true
+EOF
+chmod 0644 "$DESKTOP_FILE"
+
 CONTROL_FILE="$PKG_ROOT/DEBIAN/control"
 cat > "$CONTROL_FILE" <<EOF
 Package: aifilesorter
@@ -342,6 +359,7 @@ chmod 0755 "$PKG_ROOT/opt/aifilesorter/bin/aifilesorter-bin"
 chmod 0755 "$PKG_ROOT/opt/aifilesorter/bin/aifilesorter"
 chmod 0755 "$PKG_ROOT/usr/bin/run_aifilesorter.sh"
 chmod 0755 "$PKG_ROOT/usr/bin/aifilesorter"
+chmod 0644 "$PKG_ROOT/usr/share/applications/filesort-guard.desktop"
 
 SIZE_KB=$(du -sk "$PKG_ROOT" | cut -f1)
 sed -i "s/^Installed-Size: .*/Installed-Size: ${SIZE_KB}/" "$CONTROL_FILE"
