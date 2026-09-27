@@ -335,7 +335,19 @@ BatchFolderCategorizationResult BatchFolderCategorizer::categorize(
     }
 
     const int max_tokens = recommended_max_output_tokens(entries.size());
-    const std::string response = llm.complete_prompt(prompt, max_tokens);
+    std::string response;
+    try {
+        response = llm.complete_prompt(prompt, max_tokens);
+    } catch (const std::exception& ex) {
+        const QString message = QCoreApplication::translate(
+            "BatchFolderCategorizer",
+            "The AI request failed before a complete response was received. "
+            "Items: %1, prompt size: %2 KiB.\n\n%3")
+            .arg(static_cast<qulonglong>(entries.size()))
+            .arg(static_cast<qulonglong>((prompt.size() + 1023) / 1024))
+            .arg(QString::fromUtf8(ex.what()));
+        throw std::runtime_error(message.toStdString());
+    }
 
     try {
         return parse_response(response, entries, options);
