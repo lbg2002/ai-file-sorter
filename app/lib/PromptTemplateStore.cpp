@@ -121,7 +121,12 @@ std::string PromptTemplateStore::render_or_default(std::string_view original_pro
 {
     std::scoped_lock lock(g_mutex);
     if (!g_enabled) {
-        return std::string(original_prompt);
+        // Keep the specialized upstream image/document instructions intact, but
+        // consistently discourage fragmented taxonomy even without an override.
+        return std::string(original_prompt) +
+            "\\n整理策略：优先复用现有目录和已经采用的分类名称，合并语义相近的资料；"
+            "不要为了单个文件临时创建新类别。将目录视为整体，不拆分其内容。"
+            "严格遵守既有白名单与输出格式，只输出英文分类标签。";
     }
 
     std::string rendered = g_template.empty() ? default_template() : g_template;
