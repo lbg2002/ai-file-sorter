@@ -321,6 +321,49 @@ void apply_windows_runtime_theme(QApplication& app)
 #endif
 }
 
+QString main_window_style_sheet(const QPalette& palette)
+{
+    // Restrained, native-Qt interpretation of Apple's visual hierarchy. No web rendering,
+    // third-party dependencies, or interference with the existing controllers.
+    const bool dark = palette_is_dark(palette);
+    const QString background = dark ? QStringLiteral("#151923") : QStringLiteral("#f5f6fa");
+    const QString surface = dark ? QStringLiteral("#222938") : QStringLiteral("#ffffff");
+    const QString line = dark ? QStringLiteral("#344057") : QStringLiteral("#e4e8f0");
+    const QString text = dark ? QStringLiteral("#edf2fa") : QStringLiteral("#1d2736");
+    const QString muted = dark ? QStringLiteral("#a1adc0") : QStringLiteral("#64748b");
+    const QString accent = dark ? QStringLiteral("#6293fb") : QStringLiteral("#316de8");
+    const QString hover = dark ? QStringLiteral("#29374e") : QStringLiteral("#edf3ff");
+    return QStringLiteral(R"(
+        QWidget#aifsCentralSurface { background: %1; color: %4; }
+        QLabel#aifsHeroTitle { font-size: 23px; font-weight: 700; color: %4; }
+        QLabel#aifsHeroSubtitle { font-size: 12px; color: %5; }
+        QLabel#aifsSectionTitle { font-size: 13px; font-weight: 700; color: %4; }
+        QFrame[aifsCard="true"] { background: %2; border: 1px solid %3; border-radius: 14px; }
+        QFrame[aifsCard="true"] QLabel, QFrame[aifsCard="true"] QCheckBox,
+        QFrame[aifsCard="true"] QRadioButton { border: none; background: transparent; }
+        QLineEdit, QComboBox {
+            min-height: 28px; padding: 4px 9px; background: %2;
+            color: %4; border: 1px solid %3; border-radius: 8px;
+        }
+        QLineEdit:focus, QComboBox:focus { border-color: %6; }
+        QPushButton {
+            min-height: 29px; padding: 4px 12px; background: %2;
+            border: 1px solid %3; color: %4; border-radius: 8px;
+        }
+        QPushButton:hover { background: %7; border-color: %6; }
+        QPushButton:disabled { color: %5; }
+        QPushButton#aifsPrimaryAction {
+            min-height: 36px; padding: 4px 23px; background: %6;
+            border: none; color: white; font-weight: 700; border-radius: 10px;
+        }
+        QPushButton#aifsPrimaryAction:hover { background: %6; }
+        QCheckBox, QRadioButton { spacing: 7px; }
+        QTreeView { background: %2; color: %4; border: none; outline: 0; }
+        QTreeView::item { min-height: 25px; }
+        QToolTip { color: %4; background: %2; border: 1px solid %3; padding: 5px; }
+    )").arg(background, surface, line, text, muted, accent, hover);
+}
+
 QString file_explorer_panel_style_sheet(const QPalette& palette)
 {
     const ThemeColors colors = build_theme_colors(palette);
