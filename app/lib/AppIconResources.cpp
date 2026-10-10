@@ -1,46 +1,45 @@
 #include "AppIconResources.hpp"
 
-#include <QFile>
-#include <QSize>
-
-#include <array>
-
-namespace {
-
-struct IconResourceEntry {
-    const char* path;
-    QSize size;
-};
-
-constexpr std::array<IconResourceEntry, 6> kWindowIconResources{{
-    {":/dev/hfstudio/AIFileSorter/images/icon_16x16.png", QSize(16, 16)},
-    {":/dev/hfstudio/AIFileSorter/images/icon_32x32.png", QSize(32, 32)},
-    {":/dev/hfstudio/AIFileSorter/images/icon_64x64.png", QSize(64, 64)},
-    {":/dev/hfstudio/AIFileSorter/images/icon_128x128.png", QSize(128, 128)},
-    {":/dev/hfstudio/AIFileSorter/images/icon_256x256.png", QSize(256, 256)},
-    {":/dev/hfstudio/AIFileSorter/images/icon_512x512.png", QSize(512, 512)},
-}};
-
-constexpr auto kFallbackLogoResource = ":/dev/hfstudio/AIFileSorter/images/logo.png";
-
-} // namespace
+#include <QColor>
+#include <QIcon>
+#include <QPainter>
+#include <QPainterPath>
+#include <QPixmap>
+#include <QRectF>
 
 namespace AppIconResources {
 
+// Original vector-drawn FileSort Guard emblem: layered folders + sorting checkmark.
+// No OS icon theme, SVG plugin or external image asset is required.
 QIcon build_window_icon()
 {
     QIcon icon;
-    bool added_any = false;
-    for (const auto& entry : kWindowIconResources) {
-        if (!QFile::exists(QString::fromUtf8(entry.path))) {
-            continue;
-        }
-        icon.addFile(QString::fromUtf8(entry.path), entry.size);
-        added_any = true;
-    }
+    for (const int size : {16, 32, 64, 128, 256, 512}) {
+        QPixmap pixmap(size, size);
+        pixmap.fill(Qt::transparent);
+        QPainter painter(&pixmap);
+        painter.setRenderHint(QPainter::Antialiasing);
+        painter.scale(size / 100.0, size / 100.0);
 
-    if (!added_any || icon.isNull()) {
-        return QIcon(QString::fromUtf8(kFallbackLogoResource));
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(QColor("#233a67"));
+        painter.drawRoundedRect(QRectF(3, 3, 94, 94), 23, 23);
+        painter.setBrush(QColor("#456fe0"));
+        painter.drawRoundedRect(QRectF(12, 24, 76, 61), 12, 12);
+        painter.setBrush(QColor("#99c9ff"));
+        painter.drawRoundedRect(QRectF(18, 17, 32, 18), 6, 6);
+        painter.setBrush(QColor("#dcecff"));
+        painter.drawRoundedRect(QRectF(17, 34, 65, 44), 8, 8);
+
+        QPainterPath check;
+        check.moveTo(31, 55);
+        check.lineTo(45, 67);
+        check.lineTo(70, 43);
+        painter.setPen(QPen(QColor("#1c65dd"), 8, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+        painter.setBrush(Qt::NoBrush);
+        painter.drawPath(check);
+        painter.end();
+        icon.addPixmap(pixmap);
     }
     return icon;
 }
