@@ -347,12 +347,29 @@ void MainAppUiBuilder::build(MainApp& app) {
 
 void MainAppUiBuilder::build_central_panel(MainApp& app) {
     app.setWindowTitle(app_display_name());
-    app.resize(1000, 800);
+    app.resize(1120, 860);
 
     QWidget* central = new QWidget(&app);
+    central->setObjectName(QStringLiteral("aifsCentralSurface"));
     auto* main_layout = new QVBoxLayout(central);
-    main_layout->setContentsMargins(12, 12, 12, 12);
-    main_layout->setSpacing(8);
+    main_layout->setContentsMargins(22, 18, 22, 18);
+    main_layout->setSpacing(13);
+
+    auto* hero_title = new QLabel(QObject::tr("FileSort Guard"), central);
+    hero_title->setObjectName(QStringLiteral("aifsHeroTitle"));
+    auto* hero_subtitle = new QLabel(QObject::tr("智能整理 · 分类前审核 · 操作可撤销"), central);
+    hero_subtitle->setObjectName(QStringLiteral("aifsHeroSubtitle"));
+    main_layout->addWidget(hero_title);
+    main_layout->addWidget(hero_subtitle);
+
+    auto* location_card = new QFrame(central);
+    location_card->setProperty("aifsCard", true);
+    auto* location_layout = new QVBoxLayout(location_card);
+    location_layout->setContentsMargins(16, 13, 16, 13);
+    location_layout->setSpacing(8);
+    auto* location_title = new QLabel(QObject::tr("整理位置  /  Workspace"), location_card);
+    location_title->setObjectName(QStringLiteral("aifsSectionTitle"));
+    location_layout->addWidget(location_title);
 
     auto* path_layout = new QHBoxLayout();
     app.path_label = new QLabel(central);
@@ -361,8 +378,17 @@ void MainAppUiBuilder::build_central_panel(MainApp& app) {
     path_layout->addWidget(app.path_label);
     path_layout->addWidget(app.path_entry, 1);
     path_layout->addWidget(app.browse_button);
-    main_layout->addLayout(path_layout);
+    location_layout->addLayout(path_layout);
+    main_layout->addWidget(location_card);
 
+    auto* settings_card = new QFrame(central);
+    settings_card->setProperty("aifsCard", true);
+    auto* settings_card_layout = new QVBoxLayout(settings_card);
+    settings_card_layout->setContentsMargins(16, 13, 16, 13);
+    settings_card_layout->setSpacing(7);
+    auto* settings_title = new QLabel(QObject::tr("整理选项  /  Preferences"), settings_card);
+    settings_title->setObjectName(QStringLiteral("aifsSectionTitle"));
+    settings_card_layout->addWidget(settings_title);
     auto* options_layout = new QHBoxLayout();
     app.use_subcategories_checkbox = new QCheckBox(central);
     app.categorize_files_checkbox = new QCheckBox(central);
@@ -375,7 +401,7 @@ void MainAppUiBuilder::build_central_panel(MainApp& app) {
     options_layout->addWidget(app.categorize_directories_checkbox);
     options_layout->addWidget(app.include_subdirectories_checkbox);
     options_layout->addStretch(1);
-    main_layout->addLayout(options_layout);
+    settings_card_layout->addLayout(options_layout);
 
     auto* document_options_layout = new QVBoxLayout();
     document_options_layout->setContentsMargins(0, 0, 0, 0);
@@ -405,7 +431,7 @@ void MainAppUiBuilder::build_central_panel(MainApp& app) {
     document_rename_layout->addWidget(app.add_document_date_to_category_checkbox);
     app.document_options_container->setVisible(false);
     document_options_layout->addWidget(app.document_options_container);
-    main_layout->addLayout(document_options_layout);
+    settings_card_layout->addLayout(document_options_layout);
 
     auto* image_options_layout = new QVBoxLayout();
     image_options_layout->setContentsMargins(0, 0, 0, 0);
@@ -437,14 +463,15 @@ void MainAppUiBuilder::build_central_panel(MainApp& app) {
     image_rename_layout->addWidget(app.rename_images_only_checkbox);
     app.image_options_container->setVisible(false);
     image_options_layout->addWidget(app.image_options_container);
-    main_layout->addLayout(image_options_layout);
+    settings_card_layout->addLayout(image_options_layout);
 
     app.add_audio_video_metadata_to_filename_checkbox = new QCheckBox(central);
     auto* audio_video_row = new QHBoxLayout();
     audio_video_row->setContentsMargins(0, 0, 0, 0);
     audio_video_row->addWidget(app.add_audio_video_metadata_to_filename_checkbox);
     audio_video_row->addStretch(1);
-    main_layout->addLayout(audio_video_row);
+    settings_card_layout->addLayout(audio_video_row);
+    main_layout->addWidget(settings_card);
 
     app.organization_mode_heading = new QLabel(QObject::tr("Organization mode"), central);
     app.organization_mode_ai_radio = new QRadioButton(QObject::tr("AI mode"), central);
@@ -463,6 +490,7 @@ void MainAppUiBuilder::build_central_panel(MainApp& app) {
     app.whitelist_selector->setMinimumWidth(fm.horizontalAdvance(QString(16, QChar('W'))) + 5);
 
     app.analyze_button = new QPushButton(central);
+    app.analyze_button->setObjectName(QStringLiteral("aifsPrimaryAction"));
     QIcon analyze_icon = QIcon::fromTheme(QStringLiteral("sparkle"));
     if (analyze_icon.isNull()) {
         analyze_icon = QIcon::fromTheme(QStringLiteral("applications-education"));
@@ -514,7 +542,12 @@ void MainAppUiBuilder::build_central_panel(MainApp& app) {
     analyze_layout->addLayout(control_block);
     analyze_layout->addSpacing(12);
     analyze_layout->addWidget(app.analyze_button, 0, Qt::AlignBottom | Qt::AlignRight);
-    main_layout->addLayout(analyze_layout);
+    auto* run_card = new QFrame(central);
+    run_card->setProperty("aifsCard", true);
+    auto* run_card_layout = new QVBoxLayout(run_card);
+    run_card_layout->setContentsMargins(16, 13, 16, 13);
+    run_card_layout->addLayout(analyze_layout);
+    main_layout->addWidget(run_card);
 
     app.tree_model = new QStandardItemModel(0, 5, &app);
 
@@ -557,6 +590,9 @@ void MainAppUiBuilder::build_central_panel(MainApp& app) {
     file_listing_layout->setContentsMargins(2, 2, 2, 2);
     file_listing_layout->setSpacing(0);
     file_listing_layout->addWidget(app.results_stack);
+    auto* results_heading = new QLabel(QObject::tr("文件与整理预览  /  Library"), central);
+    results_heading->setObjectName(QStringLiteral("aifsSectionTitle"));
+    main_layout->addWidget(results_heading);
     main_layout->addWidget(app.file_listing_panel, 1);
 
     app.setCentralWidget(central);
@@ -791,14 +827,7 @@ void MainAppUiBuilder::build_view_menu(MainApp& app) {
             palette.setColor(QPalette::ToolTipText, text);
             palette.setColor(QPalette::Link, accent);
             QApplication::setPalette(palette);
-            qApp->setStyleSheet(QStringLiteral(
-                "QPushButton,QComboBox,QLineEdit,QPlainTextEdit,QTextEdit { border-radius: 7px; padding: 4px 7px; }"
-                "QPushButton { min-height: 25px; }"
-                "QMenu { padding: 5px; }"
-                "QMenu::item { padding: 6px 23px; border-radius: 5px; }"
-                "QGroupBox { border-radius: 8px; }"));
         } else {
-            qApp->setStyleSheet(QString());
             QApplication::setPalette(QPalette());
         }
         app.apply_theme_styles();
