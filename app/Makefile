@@ -67,7 +67,10 @@ else
 endif
 
     # --- Other dependencies ---
-	LDFLAGS += -lcurl -ljsoncpp -lsqlite3 -lcrypto -lfmt -lspdlog -lssl -lllama -lggml -lggml-base -lmtmd -lX11 -pthread
+	LDFLAGS += -lcurl -ljsoncpp -lsqlite3 -lcrypto -lfmt -lspdlog -lssl -lX11 -pthread
+    ifneq ($(REMOTE_API_ONLY),1)
+	LDFLAGS += -lllama -lggml -lggml-base -lmtmd
+    endif
 	LDFLAGS += -Wl,-rpath,'$$ORIGIN/../lib/precompiled/cpu/bin' -Wl,-rpath,'$$ORIGIN/../lib/precompiled'
 	LDFLAGS += -Wl,-rpath-link=./lib/precompiled/cpu/bin -Wl,-rpath-link=./lib/precompiled
 
