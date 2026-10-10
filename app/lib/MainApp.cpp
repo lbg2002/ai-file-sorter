@@ -722,6 +722,7 @@ void MainApp::apply_theme_styles()
 
     apply_if_changed(file_listing_panel,
                      AppTheme::file_listing_panel_style_sheet(current_palette));
+    apply_if_changed(centralWidget(), AppTheme::main_window_style_sheet(current_palette));
 }
 
 
