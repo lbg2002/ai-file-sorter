@@ -20,6 +20,7 @@ Usage: ./package_deb.sh [options] [version]
 
 Options:
   --cpu-only         Include only the CPU runtime, even if GPU variants are staged.
+  --remote-api-only   Minimal package, no local inference runtime or ggml dependencies.
   --include-cuda     Include precompiled CUDA runtime libs (app/lib/precompiled/cuda)
   --include-vulkan   Include precompiled Vulkan runtime libs (app/lib/precompiled/vulkan)
   --include-all      Include CPU + CUDA + Vulkan precompiled runtime libs
@@ -52,6 +53,7 @@ VERSION_FROM_HEADER() {
 }
 
 INCLUDE_CPU=1
+REMOTE_API_PACKAGE=0
 AUTO_INCLUDE_GPU=1
 REQUIRE_CUDA=0
 REQUIRE_VULKAN=0
@@ -60,6 +62,11 @@ VERSION_ARG=""
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --cpu-only)
+            AUTO_INCLUDE_GPU=0
+            ;;
+        --remote-api-only)
+            REMOTE_API_PACKAGE=1
+            INCLUDE_CPU=0
             AUTO_INCLUDE_GPU=0
             ;;
         --include-cuda)
@@ -95,6 +102,10 @@ while [[ $# -gt 0 ]]; do
 done
 
 VERSION="${VERSION_ARG:-$(VERSION_FROM_HEADER "$APP_DIR/include/app_version.hpp")}"
+if [[ "$REMOTE_API_PACKAGE" == "1" && ( "$REQUIRE_CUDA" == "1" || "$REQUIRE_VULKAN" == "1" ) ]]; then
+    echo "Remote API package cannot contain local accelerator libraries." >&2
+    exit 1
+fi
 
 if [[ "$AUTO_INCLUDE_GPU" == "0" && ( "$REQUIRE_CUDA" == "1" || "$REQUIRE_VULKAN" == "1" ) ]]; then
     echo "Cannot combine --cpu-only with GPU include flags." >&2
@@ -109,12 +120,22 @@ fi
 BIN_PATH="$APP_DIR/bin/aifilesorter-bin"
 if [[ ! -x "$BIN_PATH" ]]; then
     echo "Binary not found at $BIN_PATH — running make." >&2
-    make -C "$APP_DIR"
+    if [[ "$REMOTE_API_PACKAGE" == "1" ]]; then
+        make -C "$APP_DIR" REMOTE_API_ONLY=1
+    else
+        make -C "$APP_DIR"
+    fi
 fi
 
 if [[ ! -x "$BIN_PATH" ]]; then
     echo "Binary still missing after build attempt." >&2
     exit 1
+fi
+if [[ "$REMOTE_API_PACKAGE" == "1" ]]; then
+    if readelf -d "$BIN_PATH" 2>/dev/null | grep -Eq 'NEEDED.*lib(llama|ggml|mtmd)'; then
+        echo "Refusing remote-only package: binary still links to local inference libraries." >&2
+        exit 1
+    fi
 fi
 
 get_needed_soname() {
@@ -286,16 +307,21 @@ PACKAGE_DEPENDS=(
     "libsqlite3-0"
     "$FMT_DEP"
     "libssl3"
-    "libopenblas0-pthread"
-    "$MEDIAINFO_DEP"
+     "$MEDIAINFO_DEP"
     "$ZLIB_DEP"
 )
+if [[ "$REMOTE_API_PACKAGE" != "1" ]]; then
+    PACKAGE_DEPENDS+=("libopenblas0-pthread")
+fi
 if [[ "$INCLUDE_VULKAN" == "1" ]]; then
     PACKAGE_DEPENDS+=("libvulkan1")
 fi
 PACKAGE_DEPENDS_STR="$(join_by_comma_space "${PACKAGE_DEPENDS[@]}")"
 
 DESCRIPTION_TEXT="AI-powered file categorization tool. Requires the listed runtime libraries from the host system."
+if [[ "$REMOTE_API_PACKAGE" == "1" ]]; then
+    DESCRIPTION_TEXT+=" Remote API only: no GGML, llama.cpp, CUDA, or Vulkan runtime."
+fi
 if [[ "$INCLUDE_VULKAN" == "1" ]]; then
     DESCRIPTION_TEXT+=" Includes the Vulkan backend and requires a working host Vulkan loader/driver stack."
 fi
