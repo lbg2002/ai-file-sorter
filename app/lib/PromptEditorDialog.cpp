@@ -5,7 +5,7 @@
 #include <QCheckBox>
 #include <QDialogButtonBox>
 #include <QLabel>
-#include <QMessageBox>
+#include <QDialog>
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QVBoxLayout>
@@ -79,5 +79,18 @@ void PromptEditorDialog::show_preview()
     PromptTemplateStore::set_prompt_template(previous);
     PromptTemplateStore::set_enabled(was_enabled);
 
-    QMessageBox::information(this, tr("Rendered prompt preview"), QString::fromStdString(rendered));
+    QDialog preview_dialog(this);
+    preview_dialog.setWindowTitle(tr("Rendered prompt preview"));
+    preview_dialog.setWindowFlags(preview_dialog.windowFlags() | Qt::WindowMaximizeButtonHint);
+    preview_dialog.resize(820, 580);
+    auto* preview_layout = new QVBoxLayout(&preview_dialog);
+    auto* preview_text = new QPlainTextEdit(&preview_dialog);
+    preview_text->setPlainText(QString::fromStdString(rendered));
+    preview_text->setReadOnly(true);
+    preview_text->setLineWrapMode(QPlainTextEdit::WidgetWidth);
+    preview_layout->addWidget(preview_text, 1);
+    auto* close_buttons = new QDialogButtonBox(QDialogButtonBox::Close, &preview_dialog);
+    connect(close_buttons, &QDialogButtonBox::rejected, &preview_dialog, &QDialog::reject);
+    preview_layout->addWidget(close_buttons);
+    preview_dialog.exec();
 }
