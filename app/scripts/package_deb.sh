@@ -213,9 +213,29 @@ mkdir -p \
     "$PKG_ROOT/opt/aifilesorter/bin" \
     "$PKG_ROOT/opt/aifilesorter/lib" \
     "$PKG_ROOT/opt/aifilesorter/certs" \
-    "$PKG_ROOT/usr/bin"
+    "$PKG_ROOT/usr/bin" \
+    "$PKG_ROOT/usr/share/applications" \
+    "$PKG_ROOT/usr/share/icons/hicolor/scalable/apps"
 
 install -m 0755 "$BIN_PATH" "$PKG_ROOT/opt/aifilesorter/bin/aifilesorter-bin"
+# Install a real desktop launcher and scalable product icon, not the generic folder icon.
+install -m 0644 "$APP_DIR/resources/images/filesort-guard.svg" \
+    "$PKG_ROOT/usr/share/icons/hicolor/scalable/apps/filesort-guard.svg"
+cat > "$PKG_ROOT/usr/share/applications/filesort-guard.desktop" <<'DESKTOP'
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=FileSort Guard
+Name[zh_CN]=FileSort Guard 智能文件整理
+Comment=Reviewable AI file organization
+Comment[zh_CN]=支持审核和撤销的智能文件分类工具
+Exec=/usr/bin/aifilesorter
+Icon=filesort-guard
+Terminal=false
+Categories=Utility;FileTools;
+StartupNotify=true
+DESKTOP
+
 ln -sf aifilesorter-bin "$PKG_ROOT/opt/aifilesorter/bin/aifilesorter"
 
 PRECOMPILED_SRC="$APP_DIR/lib/precompiled"
