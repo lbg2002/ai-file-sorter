@@ -38,6 +38,7 @@ void apply_windows_runtime_theme(QApplication& app);
  * @param palette Palette used to derive container, border, and selection colors.
  * @return Stylesheet text.
  */
+QString main_window_style_sheet(const QPalette& palette);
 QString file_explorer_panel_style_sheet(const QPalette& palette);
 
 /**
