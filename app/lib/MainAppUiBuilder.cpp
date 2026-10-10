@@ -48,6 +48,9 @@
 #include <QStackedWidget>
 #include <QStandardItemModel>
 #include <QStyle>
+#include <QStyleFactory>
+#include <QSettings>
+#include <QPalette>
 #include <QStyleOption>
 #include <QTreeView>
 #include <QVBoxLayout>
@@ -364,6 +367,7 @@ void MainAppUiBuilder::build_central_panel(MainApp& app) {
     app.use_subcategories_checkbox = new QCheckBox(central);
     app.categorize_files_checkbox = new QCheckBox(central);
     app.categorize_directories_checkbox = new QCheckBox(central);
+    app.categorize_directories_checkbox->setToolTip(QObject::tr("将顶层文件夹作为一个整体分类并移动。关闭“包含子目录/递归”后可用；不会拆散其中的文件。"));
     app.include_subdirectories_checkbox = new QCheckBox(central);
     app.categorize_files_checkbox->setChecked(true);
     options_layout->addWidget(app.use_subcategories_checkbox);
@@ -758,6 +762,63 @@ void MainAppUiBuilder::build_view_menu(MainApp& app) {
         app.update_results_view_mode();
     });
     app.file_explorer_menu_action = app.toggle_explorer_action;
+    // Three palette presets inspired by modern desktop interfaces, without external theme dependencies.
+    auto* appearance_menu = app.view_menu->addMenu(QObject::tr("外观主题 / Appearance"));
+    auto* appearance_group = new QActionGroup(&app);
+    appearance_group->setExclusive(true);
+    const QStringList theme_keys{QStringLiteral("system"), QStringLiteral("light"), QStringLiteral("dark")};
+    const QStringList theme_labels{QObject::tr("跟随系统"), QObject::tr("云雾浅色"), QObject::tr("午夜深色")};
+    const auto apply_appearance = [&app](const QString& key) {
+        const QString fusion = QStringLiteral("Fusion");
+        if (key != QStringLiteral("system")) {
+            QApplication::setStyle(QStyleFactory::create(fusion));
+            const bool dark = key == QStringLiteral("dark");
+            const QColor window = dark ? QColor("#171d2b") : QColor("#f5f7fb");
+            const QColor surface = dark ? QColor("#202a3b") : QColor("#ffffff");
+            const QColor text = dark ? QColor("#e9eef8") : QColor("#202b3a");
+            const QColor accent = dark ? QColor("#6595f8") : QColor("#316ce7");
+            QPalette palette;
+            palette.setColor(QPalette::Window, window);
+            palette.setColor(QPalette::WindowText, text);
+            palette.setColor(QPalette::Base, surface);
+            palette.setColor(QPalette::AlternateBase, dark ? QColor("#263247") : QColor("#edf2fa"));
+            palette.setColor(QPalette::Text, text);
+            palette.setColor(QPalette::Button, surface);
+            palette.setColor(QPalette::ButtonText, text);
+            palette.setColor(QPalette::Highlight, accent);
+            palette.setColor(QPalette::HighlightedText, QColor("#ffffff"));
+            palette.setColor(QPalette::ToolTipBase, surface);
+            palette.setColor(QPalette::ToolTipText, text);
+            palette.setColor(QPalette::Link, accent);
+            QApplication::setPalette(palette);
+            qApp->setStyleSheet(QStringLiteral(
+                "QPushButton,QComboBox,QLineEdit,QPlainTextEdit,QTextEdit { border-radius: 7px; padding: 4px 7px; }"
+                "QPushButton { min-height: 25px; }"
+                "QMenu { padding: 5px; }"
+                "QMenu::item { padding: 6px 23px; border-radius: 5px; }"
+                "QGroupBox { border-radius: 8px; }"));
+        } else {
+            qApp->setStyleSheet(QString());
+            QApplication::setPalette(QPalette());
+        }
+        app.apply_theme_styles();
+    };
+    QSettings appearance_settings(QStringLiteral("FileSortGuard"), QStringLiteral("FileSortGuard"));
+    const QString saved_appearance = appearance_settings.value(QStringLiteral("appearance/theme"),
+                                                                  QStringLiteral("system")).toString();
+    for (int i = 0; i < theme_keys.size(); ++i) {
+        QAction* choice = appearance_menu->addAction(theme_labels.at(i));
+        choice->setCheckable(true);
+        choice->setData(theme_keys.at(i));
+        appearance_group->addAction(choice);
+        choice->setChecked(saved_appearance == theme_keys.at(i));
+        QObject::connect(choice, &QAction::triggered, &app, [apply_appearance, key = theme_keys.at(i)]() {
+            QSettings settings(QStringLiteral("FileSortGuard"), QStringLiteral("FileSortGuard"));
+            settings.setValue(QStringLiteral("appearance/theme"), key);
+            apply_appearance(key);
+        });
+    }
+    apply_appearance(theme_keys.contains(saved_appearance) ? saved_appearance : QStringLiteral("system"));
 }
 
 void MainAppUiBuilder::build_settings_menu(MainApp& app) {
