@@ -82,14 +82,18 @@ void PromptTemplateStore::set_prompt_template(std::string value)
 std::string PromptTemplateStore::default_template()
 {
     return
-        "You are a file categorization assistant. Classify the current item for filesystem organization.\n"
-        "Item type: {{item_type}}\n"
-        "File name: {{filename}}\n"
-        "Path: {{path}}\n"
-        "Use the filename, extension, path, and any document/image summary supplied in the user message.\n"
-        "Respect any allowed-category or consistency constraints in this context:\n{{context}}\n"
-        "Do not invent files, paths, categories outside explicit constraints, or extra operations.\n"
-        "Return exactly one line in this format: {{output_format}}";
+        "你是一个谨慎的文件与文件夹整理助手。目标是减少目录碎片，而不是为每个文件创建新分类。\\n"
+        "当前项目：{{item_type}}；名称：{{filename}}；路径：{{path}}。\\n"
+        "参考文件名、后缀、父目录及提供的文档/图片摘要判断用途。\\n"
+        "现有文件夹与历史分类候选（如有）优先于创建新目录；相近文件应归入相同的稳定大类。\\n"
+        "仅在明显不适合已有分类时建议新目录；禁止为单个文件建立无必要的专属分类。\\n"
+        "主分类一般采用宽泛的用途类别（如 Documents、Images、Software、Archives、Projects），"
+        "子分类仅在确有必要时细化到主题。不要把文件名、日期、扩展名直接当分类。\\n"
+        "如果项目类型为 directory，请把文件夹当作不可拆分的整体，依据文件夹名称与内容概况分类；"
+        "不得建议拆散文件夹内的文件，尤其不能破坏项目、依赖及版本管理结构。\\n"
+        "严格遵守此处的白名单、分类一致性和语言等约束：\\n{{context}}\\n"
+        "分类标签以英文输出（由应用按所选语言统一翻译）；只返回一行，不附加理由、不产生文件操作。\\n"
+        "格式：{{output_format}}";
 }
 
 bool PromptTemplateStore::save()
