@@ -30,11 +30,18 @@ endif
 # Usage: make LLAMA_MULTI_VARIANT=1
 LLAMA_MULTI_VARIANT ?= 0
 GGML_PRECOMPILED_SUBDIR ?= precompiled
+# Dedicated lightweight remote-API build. No llama.cpp sources, headers, or libs.
+REMOTE_API_ONLY ?= 0
+ifeq ($(REMOTE_API_ONLY),1)
+    CXXFLAGS += -DAI_FILE_SORTER_REMOTE_API_ONLY
+endif
 
 ifeq ($(UNAME), Linux)
     PLATFORM := Linux
     CXXFLAGS += -DLINUX
+    ifneq ($(REMOTE_API_ONLY),1)
     CXXFLAGS += -DAI_FILE_SORTER_HAS_MTMD
+    endif
     TARGET := $(BIN_DIR)/aifilesorter-bin
     INSTALL_DIR := /usr/local/bin
     INSTALL_LIB_DIR := /usr/local/lib/aifilesorter
@@ -161,7 +168,10 @@ endif
     CXXFLAGS += $(QT_CXXFLAGS)
     LDFLAGS += $(QT_LDFLAGS)
 
-    LDFLAGS += -lcurl -ljsoncpp -lsqlite3 -lcrypto -lfmt -lspdlog -lssl -lllama -lggml -lggml-base -lmtmd -lintl -pthread
+    LDFLAGS += -lcurl -ljsoncpp -lsqlite3 -lcrypto -lfmt -lspdlog -lssl -lintl -pthread
+    ifneq ($(REMOTE_API_ONLY),1)
+    LDFLAGS += -lllama -lggml -lggml-base -lmtmd
+    endif
 	LDFLAGS += -framework Metal -framework Foundation
     LDFLAGS += -Wl,-rpath,@loader_path/lib -Wl,-rpath,@loader_path/../lib/$(GGML_PRECOMPILED_SUBDIR)
     BIN_SUBDIR := $(patsubst ./bin/%,%,$(BIN_DIR))
@@ -241,7 +251,10 @@ CXXFLAGS += -Wno-array-bounds
 else
 CXXFLAGS += -Wno-array-bounds -Wno-stringop-overflow -Wno-stringop-overread
 endif
-INCLUDE_DIRS = -I./include -I./include/external/llama.cpp/include -I./include/external/llama.cpp/ggml/include -I./include/external/llama.cpp/tools/mtmd
+INCLUDE_DIRS = -I./include
+ifneq ($(REMOTE_API_ONLY),1)
+INCLUDE_DIRS += -I./include/external/llama.cpp/include -I./include/external/llama.cpp/ggml/include -I./include/external/llama.cpp/tools/mtmd
+endif
 LIB_DIRS =
 ifeq ($(UNAME), Linux)
 LIB_DIRS += -L./lib/precompiled/cpu/bin -L./lib/precompiled
@@ -519,6 +532,11 @@ endif
 # Source files
 SRCS = main.cpp $(wildcard $(SRC_DIR)/*.cpp)
 SRCS := $(filter-out $(SRC_DIR)/MainAppTestAccess.cpp,$(SRCS))
+ifeq ($(REMOTE_API_ONLY),1)
+SRCS := $(filter-out $(SRC_DIR)/LocalLLMClient.cpp $(SRC_DIR)/LlavaImageAnalyzer.cpp,$(SRCS))
+else
+SRCS := $(filter-out $(SRC_DIR)/LocalLLMClientRemoteStub.cpp $(SRC_DIR)/LlavaImageAnalyzerRemoteStub.cpp,$(SRCS))
+endif
 OBJS = $(patsubst %.cpp, $(OBJ_DIR)/%.o, $(notdir $(SRCS)))
 ONEDRIVE_PLUGIN_MAIN_SRC := $(PLUGIN_SRC_DIR)/onedrive_storage_plugin_main.cpp
 ONEDRIVE_PLUGIN_MAIN_OBJ := $(OBJ_DIR)/onedrive_storage_plugin_main.o
