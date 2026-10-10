@@ -2422,11 +2422,11 @@ void MainApp::record_categorized_metrics(int count)
     if (test_mode_) {
         return;
     }
-    record_categorized_metrics_impl(
-        settings,
-        donation_prompt_active_,
-        count,
-        [this](int total) { return show_support_prompt_dialog(total); });
+    // Count completed items without interrupting the user with donation prompts.
+    if (count > 0) {
+        settings.add_categorized_files(count);
+        settings.save();
+    }
 }
 
 void MainApp::maybe_show_windows_explorer_extension_install_prompt()
