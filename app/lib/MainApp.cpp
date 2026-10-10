@@ -46,7 +46,9 @@
 #include "WhitelistManagerDialog.hpp"
 #include "UndoManager.hpp"
 #include "WhitelistTestFixtures.hpp"
+#ifndef AI_FILE_SORTER_REMOTE_API_ONLY
 #include "ggml-backend.h"
+#endif
 
 #include <app_version.hpp>
 
@@ -417,6 +419,7 @@ bool case_insensitive_contains(std::string_view haystack, std::string_view needl
     return it != haystack.end();
 }
 
+#ifndef AI_FILE_SORTER_REMOTE_API_ONLY
 void load_status_ggml_backends_once()
 {
     GgmlRuntimePaths::ensure_ggml_backends_loaded(Logger::get_logger("core_logger"));
@@ -485,6 +488,12 @@ std::optional<std::string> detect_status_blas_backend_label()
 
     return std::nullopt;
 }
+
+#else
+void load_status_ggml_backends_once() {}
+bool status_backend_available(std::string_view) { return false; }
+std::optional<std::string> detect_status_blas_backend_label() { return std::nullopt; }
+#endif
 
 std::string detect_loaded_backend_key()
 {
