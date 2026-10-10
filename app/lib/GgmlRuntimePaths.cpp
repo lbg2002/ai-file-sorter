@@ -1,10 +1,10 @@
 #include "GgmlRuntimePaths.hpp"
 
-#ifndef AI_FILE_SORTER_GGML_RUNTIME_PATHS_NO_BACKEND_LOADING
+#if !defined(AI_FILE_SORTER_GGML_RUNTIME_PATHS_NO_BACKEND_LOADING) && !defined(AI_FILE_SORTER_REMOTE_API_ONLY)
 #include "ggml-backend.h"
 #endif
 
-#ifndef AI_FILE_SORTER_GGML_RUNTIME_PATHS_NO_BACKEND_LOADING
+#if !defined(AI_FILE_SORTER_GGML_RUNTIME_PATHS_NO_BACKEND_LOADING) && !defined(AI_FILE_SORTER_REMOTE_API_ONLY)
 #include <spdlog/spdlog.h>
 #endif
 
@@ -339,7 +339,7 @@ std::optional<std::string> sanitize_linux_backend_environment()
 
 void ensure_ggml_backends_loaded(const std::shared_ptr<spdlog::logger>& logger)
 {
-#ifdef AI_FILE_SORTER_GGML_RUNTIME_PATHS_NO_BACKEND_LOADING
+#if defined(AI_FILE_SORTER_GGML_RUNTIME_PATHS_NO_BACKEND_LOADING) || defined(AI_FILE_SORTER_REMOTE_API_ONLY)
     (void)logger;
 #else
     static std::once_flag load_once;

@@ -169,6 +169,17 @@ LLMSelectionDialog::LLMSelectionDialog(Settings& settings, QWidget* parent)
     setModal(true);
     setup_ui();
     connect_signals();
+#ifdef AI_FILE_SORTER_REMOTE_API_ONLY
+    // This variant never offers a local model or a model download.
+    for (QWidget* widget : {static_cast<QWidget*>(local3_radio), static_cast<QWidget*>(local7_radio),
+                             static_cast<QWidget*>(local7_gemma_radio), static_cast<QWidget*>(local3_legacy_radio),
+                             static_cast<QWidget*>(custom_radio), static_cast<QWidget*>(custom_combo),
+                             static_cast<QWidget*>(add_custom_button), static_cast<QWidget*>(edit_custom_button),
+                             static_cast<QWidget*>(delete_custom_button), static_cast<QWidget*>(download_toggle_button),
+                             static_cast<QWidget*>(downloads_container), static_cast<QWidget*>(download_section)}) {
+        if (widget) widget->hide();
+    }
+#endif
 
     openai_api_key = settings.get_openai_api_key();
     openai_model = settings.get_openai_model();
@@ -188,6 +199,11 @@ LLMSelectionDialog::LLMSelectionDialog(Settings& settings, QWidget* parent)
     }
 
     selected_choice = settings.get_llm_choice();
+#ifdef AI_FILE_SORTER_REMOTE_API_ONLY
+    if (!is_remote_choice(selected_choice)) {
+        selected_choice = LLMChoice::Remote_Custom;
+    }
+#endif
     selected_custom_id = settings.get_active_custom_llm_id();
     selected_custom_api_id = settings.get_active_custom_api_id();
     switch (selected_choice) {
@@ -481,6 +497,15 @@ void LLMSelectionDialog::setup_ui()
     llm_group->addButton(local7_gemma_radio);
     llm_group->addButton(custom_radio);
 
+#ifdef AI_FILE_SORTER_REMOTE_API_ONLY
+    for (QWidget* local_widget : {static_cast<QWidget*>(local3_radio), static_cast<QWidget*>(local3_desc),
+                                static_cast<QWidget*>(local7_radio), static_cast<QWidget*>(local7_desc),
+                                static_cast<QWidget*>(local7_gemma_radio), static_cast<QWidget*>(local7_gemma_desc),
+                                static_cast<QWidget*>(local3_legacy_radio), static_cast<QWidget*>(local3_legacy_desc),
+                                static_cast<QWidget*>(custom_radio), static_cast<QWidget*>(custom_row)}) {
+        if (local_widget) local_widget->setVisible(false);
+    }
+#endif
     layout->addWidget(radio_container);
 
     download_toggle_button = new QToolButton(this);

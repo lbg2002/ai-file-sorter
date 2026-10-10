@@ -2,7 +2,9 @@
 
 #include "ILLMClient.hpp"
 #include "Types.hpp"
+#ifndef AI_FILE_SORTER_REMOTE_API_ONLY
 #include "llama.h"
+#endif
 #include <functional>
 #include <memory>
 #include <optional>
@@ -83,6 +85,12 @@ public:
     void set_fallback_decision_callback(FallbackDecisionCallback callback);
 
 private:
+#ifdef AI_FILE_SORTER_REMOTE_API_ONLY
+    std::string model_path;
+    bool prompt_logging_enabled{false};
+    StatusCallback status_callback_;
+    FallbackDecisionCallback fallback_decision_callback_;
+#else
     void load_model_if_needed();
     void configure_llama_logging(const std::shared_ptr<spdlog::logger>& logger) const;
     llama_model_params prepare_model_params(const std::shared_ptr<spdlog::logger>& logger);
@@ -110,4 +118,5 @@ private:
     std::optional<std::string> original_gpu_backend_env_;
     std::optional<std::string> original_llama_arg_device_env_;
     std::optional<std::string> original_ggml_disable_cuda_env_;
+#endif
 };

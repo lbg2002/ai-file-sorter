@@ -48,6 +48,9 @@
 #include <QStackedWidget>
 #include <QStandardItemModel>
 #include <QStyle>
+#include <QStyleFactory>
+#include <QSettings>
+#include <QPalette>
 #include <QStyleOption>
 #include <QTreeView>
 #include <QVBoxLayout>
@@ -344,12 +347,29 @@ void MainAppUiBuilder::build(MainApp& app) {
 
 void MainAppUiBuilder::build_central_panel(MainApp& app) {
     app.setWindowTitle(app_display_name());
-    app.resize(1000, 800);
+    app.resize(1120, 860);
 
     QWidget* central = new QWidget(&app);
+    central->setObjectName(QStringLiteral("aifsCentralSurface"));
     auto* main_layout = new QVBoxLayout(central);
-    main_layout->setContentsMargins(12, 12, 12, 12);
-    main_layout->setSpacing(8);
+    main_layout->setContentsMargins(22, 18, 22, 18);
+    main_layout->setSpacing(13);
+
+    auto* hero_title = new QLabel(QObject::tr("FileSort Guard"), central);
+    hero_title->setObjectName(QStringLiteral("aifsHeroTitle"));
+    auto* hero_subtitle = new QLabel(QObject::tr("智能整理 · 分类前审核 · 操作可撤销"), central);
+    hero_subtitle->setObjectName(QStringLiteral("aifsHeroSubtitle"));
+    main_layout->addWidget(hero_title);
+    main_layout->addWidget(hero_subtitle);
+
+    auto* location_card = new QFrame(central);
+    location_card->setProperty("aifsCard", true);
+    auto* location_layout = new QVBoxLayout(location_card);
+    location_layout->setContentsMargins(16, 13, 16, 13);
+    location_layout->setSpacing(8);
+    auto* location_title = new QLabel(QObject::tr("整理位置  /  Workspace"), location_card);
+    location_title->setObjectName(QStringLiteral("aifsSectionTitle"));
+    location_layout->addWidget(location_title);
 
     auto* path_layout = new QHBoxLayout();
     app.path_label = new QLabel(central);
@@ -358,12 +378,22 @@ void MainAppUiBuilder::build_central_panel(MainApp& app) {
     path_layout->addWidget(app.path_label);
     path_layout->addWidget(app.path_entry, 1);
     path_layout->addWidget(app.browse_button);
-    main_layout->addLayout(path_layout);
+    location_layout->addLayout(path_layout);
+    main_layout->addWidget(location_card);
 
+    auto* settings_card = new QFrame(central);
+    settings_card->setProperty("aifsCard", true);
+    auto* settings_card_layout = new QVBoxLayout(settings_card);
+    settings_card_layout->setContentsMargins(16, 13, 16, 13);
+    settings_card_layout->setSpacing(7);
+    auto* settings_title = new QLabel(QObject::tr("整理选项  /  Preferences"), settings_card);
+    settings_title->setObjectName(QStringLiteral("aifsSectionTitle"));
+    settings_card_layout->addWidget(settings_title);
     auto* options_layout = new QHBoxLayout();
     app.use_subcategories_checkbox = new QCheckBox(central);
     app.categorize_files_checkbox = new QCheckBox(central);
     app.categorize_directories_checkbox = new QCheckBox(central);
+    app.categorize_directories_checkbox->setToolTip(QObject::tr("将顶层文件夹作为一个整体分类并移动。关闭“包含子目录/递归”后可用；不会拆散其中的文件。"));
     app.include_subdirectories_checkbox = new QCheckBox(central);
     app.categorize_files_checkbox->setChecked(true);
     options_layout->addWidget(app.use_subcategories_checkbox);
@@ -371,7 +401,7 @@ void MainAppUiBuilder::build_central_panel(MainApp& app) {
     options_layout->addWidget(app.categorize_directories_checkbox);
     options_layout->addWidget(app.include_subdirectories_checkbox);
     options_layout->addStretch(1);
-    main_layout->addLayout(options_layout);
+    settings_card_layout->addLayout(options_layout);
 
     auto* document_options_layout = new QVBoxLayout();
     document_options_layout->setContentsMargins(0, 0, 0, 0);
@@ -401,7 +431,7 @@ void MainAppUiBuilder::build_central_panel(MainApp& app) {
     document_rename_layout->addWidget(app.add_document_date_to_category_checkbox);
     app.document_options_container->setVisible(false);
     document_options_layout->addWidget(app.document_options_container);
-    main_layout->addLayout(document_options_layout);
+    settings_card_layout->addLayout(document_options_layout);
 
     auto* image_options_layout = new QVBoxLayout();
     image_options_layout->setContentsMargins(0, 0, 0, 0);
@@ -433,14 +463,15 @@ void MainAppUiBuilder::build_central_panel(MainApp& app) {
     image_rename_layout->addWidget(app.rename_images_only_checkbox);
     app.image_options_container->setVisible(false);
     image_options_layout->addWidget(app.image_options_container);
-    main_layout->addLayout(image_options_layout);
+    settings_card_layout->addLayout(image_options_layout);
 
     app.add_audio_video_metadata_to_filename_checkbox = new QCheckBox(central);
     auto* audio_video_row = new QHBoxLayout();
     audio_video_row->setContentsMargins(0, 0, 0, 0);
     audio_video_row->addWidget(app.add_audio_video_metadata_to_filename_checkbox);
     audio_video_row->addStretch(1);
-    main_layout->addLayout(audio_video_row);
+    settings_card_layout->addLayout(audio_video_row);
+    main_layout->addWidget(settings_card);
 
     app.organization_mode_heading = new QLabel(QObject::tr("Organization mode"), central);
     app.organization_mode_ai_radio = new QRadioButton(QObject::tr("AI mode"), central);
@@ -459,6 +490,7 @@ void MainAppUiBuilder::build_central_panel(MainApp& app) {
     app.whitelist_selector->setMinimumWidth(fm.horizontalAdvance(QString(16, QChar('W'))) + 5);
 
     app.analyze_button = new QPushButton(central);
+    app.analyze_button->setObjectName(QStringLiteral("aifsPrimaryAction"));
     QIcon analyze_icon = QIcon::fromTheme(QStringLiteral("sparkle"));
     if (analyze_icon.isNull()) {
         analyze_icon = QIcon::fromTheme(QStringLiteral("applications-education"));
@@ -510,7 +542,12 @@ void MainAppUiBuilder::build_central_panel(MainApp& app) {
     analyze_layout->addLayout(control_block);
     analyze_layout->addSpacing(12);
     analyze_layout->addWidget(app.analyze_button, 0, Qt::AlignBottom | Qt::AlignRight);
-    main_layout->addLayout(analyze_layout);
+    auto* run_card = new QFrame(central);
+    run_card->setProperty("aifsCard", true);
+    auto* run_card_layout = new QVBoxLayout(run_card);
+    run_card_layout->setContentsMargins(16, 13, 16, 13);
+    run_card_layout->addLayout(analyze_layout);
+    main_layout->addWidget(run_card);
 
     app.tree_model = new QStandardItemModel(0, 5, &app);
 
@@ -553,6 +590,9 @@ void MainAppUiBuilder::build_central_panel(MainApp& app) {
     file_listing_layout->setContentsMargins(2, 2, 2, 2);
     file_listing_layout->setSpacing(0);
     file_listing_layout->addWidget(app.results_stack);
+    auto* results_heading = new QLabel(QObject::tr("文件与整理预览  /  Library"), central);
+    results_heading->setObjectName(QStringLiteral("aifsSectionTitle"));
+    main_layout->addWidget(results_heading);
     main_layout->addWidget(app.file_listing_panel, 1);
 
     app.setCentralWidget(central);
@@ -758,6 +798,56 @@ void MainAppUiBuilder::build_view_menu(MainApp& app) {
         app.update_results_view_mode();
     });
     app.file_explorer_menu_action = app.toggle_explorer_action;
+    // Three palette presets inspired by modern desktop interfaces, without external theme dependencies.
+    auto* appearance_menu = app.view_menu->addMenu(QObject::tr("外观主题 / Appearance"));
+    auto* appearance_group = new QActionGroup(&app);
+    appearance_group->setExclusive(true);
+    const QStringList theme_keys{QStringLiteral("system"), QStringLiteral("light"), QStringLiteral("dark")};
+    const QStringList theme_labels{QObject::tr("跟随系统"), QObject::tr("云雾浅色"), QObject::tr("午夜深色")};
+    const auto apply_appearance = [&app](const QString& key) {
+        const QString fusion = QStringLiteral("Fusion");
+        if (key != QStringLiteral("system")) {
+            QApplication::setStyle(QStyleFactory::create(fusion));
+            const bool dark = key == QStringLiteral("dark");
+            const QColor window = dark ? QColor("#171d2b") : QColor("#f5f7fb");
+            const QColor surface = dark ? QColor("#202a3b") : QColor("#ffffff");
+            const QColor text = dark ? QColor("#e9eef8") : QColor("#202b3a");
+            const QColor accent = dark ? QColor("#6595f8") : QColor("#316ce7");
+            QPalette palette;
+            palette.setColor(QPalette::Window, window);
+            palette.setColor(QPalette::WindowText, text);
+            palette.setColor(QPalette::Base, surface);
+            palette.setColor(QPalette::AlternateBase, dark ? QColor("#263247") : QColor("#edf2fa"));
+            palette.setColor(QPalette::Text, text);
+            palette.setColor(QPalette::Button, surface);
+            palette.setColor(QPalette::ButtonText, text);
+            palette.setColor(QPalette::Highlight, accent);
+            palette.setColor(QPalette::HighlightedText, QColor("#ffffff"));
+            palette.setColor(QPalette::ToolTipBase, surface);
+            palette.setColor(QPalette::ToolTipText, text);
+            palette.setColor(QPalette::Link, accent);
+            QApplication::setPalette(palette);
+        } else {
+            QApplication::setPalette(QPalette());
+        }
+        app.apply_theme_styles();
+    };
+    QSettings appearance_settings(QStringLiteral("FileSortGuard"), QStringLiteral("FileSortGuard"));
+    const QString saved_appearance = appearance_settings.value(QStringLiteral("appearance/theme"),
+                                                                  QStringLiteral("system")).toString();
+    for (int i = 0; i < theme_keys.size(); ++i) {
+        QAction* choice = appearance_menu->addAction(theme_labels.at(i));
+        choice->setCheckable(true);
+        choice->setData(theme_keys.at(i));
+        appearance_group->addAction(choice);
+        choice->setChecked(saved_appearance == theme_keys.at(i));
+        QObject::connect(choice, &QAction::triggered, &app, [apply_appearance, key = theme_keys.at(i)]() {
+            QSettings settings(QStringLiteral("FileSortGuard"), QStringLiteral("FileSortGuard"));
+            settings.setValue(QStringLiteral("appearance/theme"), key);
+            apply_appearance(key);
+        });
+    }
+    apply_appearance(theme_keys.contains(saved_appearance) ? saved_appearance : QStringLiteral("system"));
 }
 
 void MainAppUiBuilder::build_settings_menu(MainApp& app) {

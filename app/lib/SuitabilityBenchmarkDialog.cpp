@@ -11,7 +11,9 @@
 #include "Types.hpp"
 #include "Utils.hpp"
 #include "VisualLlmRuntime.hpp"
+#ifndef AI_FILE_SORTER_REMOTE_API_ONLY
 #include "ggml-backend.h"
+#endif
 
 #include <QCloseEvent>
 #include <QColor>
@@ -511,6 +513,7 @@ std::vector<DefaultModel> collect_default_models()
     return models;
 }
 
+#ifndef AI_FILE_SORTER_REMOTE_API_ONLY
 void load_ggml_backends_once();
 
 std::optional<std::string> detect_blas_backend_label()
@@ -626,6 +629,19 @@ bool is_backend_available(std::string_view backend_name)
     }
     return ggml_backend_reg_dev_count(reg) > 0;
 }
+#endif
+
+#else
+struct BackendMemorySnapshot {
+    size_t free_bytes{0};
+    size_t total_bytes{0};
+    std::string name;
+};
+std::optional<std::string> detect_blas_backend_label() { return std::nullopt; }
+std::optional<BackendMemorySnapshot> query_backend_memory(std::string_view) { return std::nullopt; }
+#if defined(__APPLE__)
+bool is_backend_available(std::string_view) { return false; }
+#endif
 #endif
 
 QString build_cpu_backend_note(const QString& reason,
