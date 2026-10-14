@@ -1,76 +1,58 @@
-<div align="center">
+# FileSort Lite · Rust / Tauri 2
 
-# 🗂️ FileSort Lite
+**轻量 API-only 文件整理器**：一次规划整个文件夹、人工审查、严格校验、操作记录与安全撤销。Rust 文件操作核心 + Tauri 2 原生 WebView 界面，不再依赖 Python、llama.cpp、本地模型、CUDA、PDFium 或多媒体模型。
 
-**小而安全的 AI 文件整理器 · 一次规划 / 逐项校验 / 随时撤销**
+> 此版本是独立重写的 **测试分支**，尚未替换主分支。设计思路来源于原 [hyperfield/ai-file-sorter](https://github.com/hyperfield/ai-file-sorter)；继续遵循 AGPL-3.0 协议。建议先拿可丢弃的测试文件夹体验。
 
-*API-only · Linux / Windows · No local models · No heavyweight ML runtime*
+## 新版界面
 
-</div>
-
-> 这是基于原 [ai-file-sorter](https://github.com/hyperfield/ai-file-sorter) 重新构建的轻量分支。保留仓库历史和原项目许可，移除原有大型本地模型、CUDA、PDFium、媒体识别、插件下载及复杂构建依赖。**该版本仅将文件名、类型、大小和现有文件夹名发送至配置的 API，不读取/上传文件内容。**
+左侧导航分为整理工作台、操作历史和设置。整理工作台包含文件夹扫描、整批 AI 与本地规则模式、可搜索和批量编辑的文件预览、目标分类汇总、安全检查状态。设置支持 API Base URL、模型列表拉取、模型名、临时 API Key、自定义提示词、规则文本、主题和文件夹移动偏好。
 
 ## 工作流程
 
-```text
-选文件夹（默认只选顶层文件）
-          ↓
-完整文件清单 ─────→ 一次 OpenAI 兼容 API 请求
-          ↓
-模型仅输出 ID → 分类文件夹 的 JSON 方案
-          ↓
-校验：遗漏 / 重复 / 虚构 / 非法路径 / 冲突
-          ↓
-可视化预览、双击修改分类、选择不移动
-          ↓
-人工确认 → 安全移动 → 写入操作日志
-          ↓
-左侧历史 → 选择记录 → 撤销（不会覆盖已有文件）
-```
+1. 选择文件夹。默认只扫描顶层普通文件（可手动启用顶层文件夹整体移动）。
+2. **AI 整批规划**：将全部文件名/扩展名、大小、类型及现有一级文件夹名一次性发送给 OpenAI 兼容 API；或选择 **本地规则规划**，无需网络。
+3. 逐项审查预览，直接修改分类、搜索、筛选及批量设置；可将项目明确设为保留原位。
+4. 检查模型遗漏、重复、幻觉 ID、非法目录、目标冲突及源文件变化。异常未排除前不允许执行。
+5. 人工确认后移动。对每步移动先写入日志，再以“不覆盖”方式重命名，单步执行成功才标记完成。
+6. 历史页查看每次移动清单或逆序撤销。已变化、冲突项目不会被强行覆盖。
 
-## 安装与运行
+## 获取安装包
 
-**源码方式：** 只需 Python 3.10+，没有任何 pip 依赖。
+[GitHub Actions](https://github.com/lbg2002/ai-file-sorter/actions) → Rust Desktop 工作流 → 选成功的运行 → Artifacts：
 
-Linux (Ubuntu/Debian):
+- Ubuntu / Debian：DEB、AppImage
+- Windows：NSIS EXE 安装器
 
-```bash
-sudo apt install python3 python3-tk
-python3 -m filesort_lite
-```
+安装包体积和 CI 成功状态需以真实构建结果为准。首次 Rust 编译会下载大量构建依赖，**构建缓存大小 ≠ 用户安装包体积**。
 
-Windows：安装 Python（需包含 Tcl/Tk），在仓库目录运行：
+## 本地开发
 
-```powershell
-py -m filesort_lite
-```
+先安装 Rust stable。Ubuntu 等发行版需 Tauri 2 系统依赖：
 
-**独立发行包：** GitHub Actions 在 Linux 和 Windows 上测试后使用 PyInstaller 构建独立程序，无需用户安装 Python；从该分支的 Actions Artifacts 下载。程序体积以实际构建产物为准，目标远小于旧版 100+ MB，但不能承诺固定大小。
+    sudo apt install libwebkit2gtk-4.1-dev build-essential \
+      libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf
 
-## 使用方法
+然后执行：
 
-1. 选择本地文件夹；勾选“包含顶层文件夹”才会把文件夹作为整体移动。软件默认不递归扫描，也不移动原有文件夹。
-2. 设置 OpenAI 兼容的 `https://…/v1` API 地址、模型名与密钥。也支持完整 `/chat/completions` URL。本机 HTTP 地址仅允许 localhost。
-3. 点 **AI 一次规划**。全部文件清单一次发送，不会为每个文件单独请求；最多 600 项、60,000 字符，超限会直接提示，不会静默拆批。
-4. 双击预览表中的项目修改目标分类，留空代表保持原位。**异常校验必须解决才能移动**。
-5. 选择 **确认移动**，之后可在左侧历史中选择对应记录并撤销。
+    cd src-tauri
+    cargo test
+    cargo run
 
-## 安全设计
+需要独立包：
 
-- 文件清单是唯一可信源，模型只输出分类建议，不接触本地文件系统操作。
-- 只允许单层分类目录；拒绝 `..`、斜杠、Windows 受限字符、系统保留名称和符号链接目标。
-- 移动前重新比对扫描时文件元信息；若源文件被改动，则中止并保留日志。
-- 目标已存在时拒绝覆盖；所有移动都有事务式 JSON 日志（操作前先持久化意图），支持异常中断后的恢复。
-- 撤销时核查文件是否改变；如果路径冲突或内容已更新，跳过并报告，不强制覆盖。
-- 操作日志保存在 Windows `%LOCALAPPDATA%/FileSortLite/history` 或 Linux `~/.local/state/FileSortLite/history`（可由 `XDG_STATE_HOME` 覆盖），不放在整理目录里。
-- API 密钥不会保存到配置文件或日志里；可使用自己的代理与自定义兼容接口。
+    cargo install tauri-cli --version '^2'
+    cargo tauri build --bundles deb,appimage
 
-**已知边界：** 本版按顶层项目整理，不对文件正文、图像内容进行本地分析，不支持按目录内部文件递归分类。网络服务看到文件名、类型、大小和现有文件夹名，请勿对敏感目录发送请求。极端并发文件系统变更、恶意程序造成的路径竞态不属于该版本的安全保证。建议先在备份副本上试用。
+Windows 需 Rust stable、MSVC Build Tools、WebView2；安装 Tauri CLI 后运行 cargo tauri build --bundles nsis。
 
-## 开发及测试
+## 安全边界
 
-```bash
-python3 -m unittest discover -s tests -v
-```
+- 仅发送清单元数据，不解析或上传文件正文；请勿对敏感文件名使用不可信 API。
+- 600 个顶层项目 / 60,000 字符的单次上限，超过则明确拒绝，不静默截断。
+- 远程接口必须 HTTPS；localhost 允许 HTTP。API Key 仅保留在进程内存，不写入设置和历史。
+- Linux 使用 renameat2(RENAME_NOREPLACE)；Windows 使用 MoveFileW，避免覆盖现有目标文件。
+- 历史记录保存在用户本地应用数据目录下 FileSortLite/history；写入操作意图以支持意外中断后恢复。
+- **撤销不是备份**。文件被编辑、外部程序并发操作、跨设备移动、权限变化等情形可能无法完整恢复。整理重要数据前请另行备份。
 
-纯 Python 标准库核心，图形界面 Tkinter；支持 Windows 和 Linux。MIT/BSD 第三方运行库并非必要；仓库沿用原 AGPL-3.0 许可证（见 `LICENSE`）。感谢 [hyperfield/ai-file-sorter](https://github.com/hyperfield/ai-file-sorter) 原作者的工作。
+采用 [AGPL-3.0](LICENSE) 开源许可。

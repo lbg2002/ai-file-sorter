@@ -1,0 +1,10 @@
+{
+  "identifier": "main-capability",
+  "description": "Only app commands and window controls",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default"
+  ]
+}
