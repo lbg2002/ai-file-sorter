@@ -1,308 +1,76 @@
 <div align="center">
 
-# 🗂️ FileSort Guard
+# 🗂️ FileSort Lite
 
-### AI 文件整理 + 可视化规则分类 + 操作前安全审查
+**小而安全的 AI 文件整理器 · 一次规划 / 逐项校验 / 随时撤销**
 
-*An AI-powered and rule-based file organizer with safety-first move validation.*
-
-[![Build](https://img.shields.io/badge/Linux%20Build-GitHub%20Actions-658cce)](https://github.com/lbg2002/ai-file-sorter/actions)
-![Technology](https://img.shields.io/badge/C%2B%2B20-Qt6-4d8ca4)
-![Modes](https://img.shields.io/badge/Modes-AI%20%7C%20Rules-9978c1)
-![Safety](https://img.shields.io/badge/Review-Before%20Moving-55a189)
-![License](https://img.shields.io/badge/License-AGPL--3.0-7e8d9c)
-
-**[⬇ 下载 Linux 预览构建](https://github.com/lbg2002/ai-file-sorter/actions/runs/38014638941)** · [🧭 快速了解](#-它能做什么) · [🛡️ 安全机制](#3-safety-validation-and-visual-anomaly-preview) · [🔧 从源码构建](#build-from-source)
+*API-only · Linux / Windows · No local models · No heavyweight ML runtime*
 
 </div>
 
-> **社区 Fork，非上游官方安装包。** 本仓库基于 [hyperfield/ai-file-sorter](https://github.com/hyperfield/ai-file-sorter) 二次开发，专注文件移动前的可检查性与安全性。**本仓库目前没有正式的 GitHub Release 安装包**，公开可下载的 Linux 构建在 GitHub Actions → Artifacts，通常需要登录 GitHub，且构建产物可能过期。其他系统请按源码说明自行构建并测试。
+> 这是基于原 [ai-file-sorter](https://github.com/hyperfield/ai-file-sorter) 重新构建的轻量分支。保留仓库历史和原项目许可，移除原有大型本地模型、CUDA、PDFium、媒体识别、插件下载及复杂构建依赖。**该版本仅将文件名、类型、大小和现有文件夹名发送至配置的 API，不读取/上传文件内容。**
 
-## ✨ 它能做什么？
-
-| 🤖 AI 智能分类 | 📐 无模型规则分类 | 🛡️ 移动前审查 |
-| :--- | :--- | :--- |
-| 使用上游 AI / 本地 LLM 分类能力；系统提示词可自行编辑与预览 | 根据文件扩展名、文件名、路径、大小执行确定性规则，无需 LLM | 对照真实扫描结果，检测重复源、遗漏文件、未知源和目标冲突 |
-| **适合多类型杂乱文件** | **适合严格可控的资料归档** | **适合重要文档的安全整理** |
-
-**典型场景：** 下载文件夹、论文资料、图片素材、代码项目归档。程序会先给出分类方案与异常提示，**实际移动文件前必须经过检查和确认**；不匹配规则的文件留在原位。
-
-## 📦 预览构建下载
-
-**[→ GitHub Actions · Build（Linux 构建产物）](https://github.com/lbg2002/ai-file-sorter/actions/runs/38014638941)**
-
-| Linux 发行版 | Artifact 名称 |
-| :--- | :--- |
-| Ubuntu LTS | `aifilesorter-linux-ubuntu-lts` |
-| Debian Stable | `aifilesorter-linux-debian-stable` |
-| Fedora | `aifilesorter-linux-fedora-latest` |
-| Rocky Linux | `aifilesorter-linux-rocky-latest` |
-| Arch Linux | `aifilesorter-linux-arch-latest` |
-
-打开运行页面底部的 **Artifacts** 下载对应压缩包；解压后按包内文件类型及本机系统依赖安装或运行。构建包包含上游图形应用及相关依赖，**与轻量纯 Rust 小工具不同，包体积可能较大**。请先在备份或测试目录体验，不要直接对唯一原始资料执行批量移动。
-
-### 🧭 推荐操作流程
+## 工作流程
 
 ```text
-选择文件夹 → 选择 AI / 规则模式 → 生成分类方案
-                ↓
-        与真实文件清单交叉校验
-                ↓
-      查看异常 → 人工确认 → 移动
-                              ↳ 已有 Undo 支持
+选文件夹（默认只选顶层文件）
+          ↓
+完整文件清单 ─────→ 一次 OpenAI 兼容 API 请求
+          ↓
+模型仅输出 ID → 分类文件夹 的 JSON 方案
+          ↓
+校验：遗漏 / 重复 / 虚构 / 非法路径 / 冲突
+          ↓
+可视化预览、双击修改分类、选择不移动
+          ↓
+人工确认 → 安全移动 → 写入操作日志
+          ↓
+左侧历史 → 选择记录 → 撤销（不会覆盖已有文件）
 ```
 
-## Why this fork
+## 安装与运行
 
-AI-assisted file organization is useful, but the model output should never be treated as the source of truth for the filesystem.
+**源码方式：** 只需 Python 3.10+，没有任何 pip 依赖。
 
-The core rule in this fork is:
-
-> **The filesystem scan is the fact; AI output is only a proposal.**
-
-Before the review plan is applied, FileSort Guard checks the proposal against the items that were actually scanned.
-
-## Added in this fork
-
-### 1. Visual prompt editor
-
-Open **Settings → Edit AI Prompt…**.
-
-The editor lets you:
-
-- enable or disable the custom prompt override;
-- edit the categorization system prompt;
-- restore the default fork template;
-- preview a rendered prompt before saving.
-
-Supported variables:
-
-| Variable | Meaning |
-| --- | --- |
-| `{{filename}}` | Current file or directory name |
-| `{{path}}` | Path/context sent to categorization |
-| `{{item_type}}` | `file` or `directory` |
-| `{{context}}` | Whitelist / consistency context |
-| `{{output_format}}` | Required category response format |
-
-When the override is disabled, the original upstream prompts are used.
-
-The override is applied to:
-
-- OpenAI / OpenAI-compatible categorization;
-- Gemini categorization;
-- local LLM categorization.
-
-### 2. Separate AI mode and Rule mode
-
-The main screen now exposes two independent organization modes:
-
-- **AI mode** — reuses the existing upstream AI pipeline.
-- **Rule mode** — does not call an LLM.
-
-This fork intentionally does **not** add embeddings, vector databases, hybrid routing, or automatic AI fallback.
-
-Open **Settings → Manage File Rules…** to edit rules.
-
-The first matching rule wins.
-
-Supported fields:
-
-- `extension`
-- `filename`
-- `path`
-- `size`
-
-Supported operators include:
-
-- `equals`
-- `contains`
-- `regex`
-- `startswith`
-- `endswith`
-- `>` / `<` for file size
-
-Example:
-
-```text
-extension | equals   | .pdf     -> Documents / PDF
-filename  | contains | meeting  -> Meetings / Notes
-filename  | regex    | ^paper_  -> Research / Papers
-```
-
-Files that do not match a rule are left untouched.
-
-### 3. Safety validation and visual anomaly preview
-
-The upstream AI pipeline categorizes items individually and normalizes the result into structured `CategorizedFile` records. FileSort Guard validates that final structured plan against a fresh filesystem snapshot before showing the review dialog.
-
-The validator detects four conditions:
-
-| Status | Meaning | Review behavior |
-| --- | --- | --- |
-| **Duplicate source** | The same source item appears more than once in the proposed plan | Highlighted amber; processing blocked |
-| **Missing from result** | A scanned item is absent from the proposed plan | Highlighted red; item is kept in place |
-| **Unknown source** | A proposed source was not present in the scan snapshot | Highlighted purple; processing blocked |
-| **Destination conflict** | Different source items resolve to the same destination path | Highlighted rose; processing blocked |
-
-The status is shown as text as well as background color, so the review does not rely on color alone.
-
-Missing items are never interpreted as a delete request. They remain at their original path.
-
-### Safety policy
-
-This fork keeps the existing preview/confirmation flow and adds these constraints:
-
-1. AI output is never the filesystem authority.
-2. A missing AI result does not delete a file.
-3. Unknown/hallucinated source paths are ignored and block processing.
-4. Duplicate source operations block processing.
-5. Multiple files targeting the same destination block processing.
-6. Rule mode only moves matched items; unmatched items remain untouched.
-7. Existing upstream Undo support remains available after a successful operation.
-
-## Architecture of the fork additions
-
-```text
-                         Selected folder
-                              |
-                              v
-                        Filesystem scan
-                              |
-              +---------------+---------------+
-              |                               |
-              v                               v
-          AI mode                         Rule mode
-              |                               |
-       upstream AI pipeline               RuleEngine
-              |                               |
-       CategorizedFile[]                 CategorizedFile[]
-              |
-              v
-     ResultIntegrityValidator
-              |
-      +-------+--------+---------+----------+
-      |                |         |          |
-   duplicate         missing   unknown   target conflict
-      |                |         |          |
-      +----------------+---------+----------+
-                       |
-                       v
-               Visual review table
-                       |
-                explicit approval
-                       |
-                       v
-                existing move/undo
-```
-
-## Fork-specific source files
-
-```text
-app/include/
-  PromptTemplateStore.hpp
-  PromptEditorDialog.hpp
-  RuleEngine.hpp
-  RuleEditorDialog.hpp
-  ResultIntegrityValidator.hpp
-
-app/lib/
-  PromptTemplateStore.cpp
-  PromptEditorDialog.cpp
-  RuleEngine.cpp
-  RuleEditorDialog.cpp
-  ResultIntegrityValidator.cpp
-
-tests/unit/
-  test_rule_engine.cpp
-  test_result_integrity_validator.cpp
-```
-
-The existing upstream AI implementation is intentionally reused rather than rewritten.
-
-## Build from source
-
-The application remains a **C++20 + Qt 6 + CMake** project.
-
-Clone this fork:
+Linux (Ubuntu/Debian):
 
 ```bash
-git clone https://github.com/lbg2002/ai-file-sorter.git
-cd ai-file-sorter
-git submodule update --init --recursive
+sudo apt install python3 python3-tk
+python3 -m filesort_lite
 ```
 
-Then follow the platform-specific dependency and build guidance already present in the repository documentation and `app/CMakeLists.txt`.
+Windows：安装 Python（需包含 Tcl/Tk），在仓库目录运行：
 
-A typical CMake flow is:
+```powershell
+py -m filesort_lite
+```
+
+**独立发行包：** GitHub Actions 在 Linux 和 Windows 上测试后使用 PyInstaller 构建独立程序，无需用户安装 Python；从该分支的 Actions Artifacts 下载。程序体积以实际构建产物为准，目标远小于旧版 100+ MB，但不能承诺固定大小。
+
+## 使用方法
+
+1. 选择本地文件夹；勾选“包含顶层文件夹”才会把文件夹作为整体移动。软件默认不递归扫描，也不移动原有文件夹。
+2. 设置 OpenAI 兼容的 `https://…/v1` API 地址、模型名与密钥。也支持完整 `/chat/completions` URL。本机 HTTP 地址仅允许 localhost。
+3. 点 **AI 一次规划**。全部文件清单一次发送，不会为每个文件单独请求；最多 600 项、60,000 字符，超限会直接提示，不会静默拆批。
+4. 双击预览表中的项目修改目标分类，留空代表保持原位。**异常校验必须解决才能移动**。
+5. 选择 **确认移动**，之后可在左侧历史中选择对应记录并撤销。
+
+## 安全设计
+
+- 文件清单是唯一可信源，模型只输出分类建议，不接触本地文件系统操作。
+- 只允许单层分类目录；拒绝 `..`、斜杠、Windows 受限字符、系统保留名称和符号链接目标。
+- 移动前重新比对扫描时文件元信息；若源文件被改动，则中止并保留日志。
+- 目标已存在时拒绝覆盖；所有移动都有事务式 JSON 日志（操作前先持久化意图），支持异常中断后的恢复。
+- 撤销时核查文件是否改变；如果路径冲突或内容已更新，跳过并报告，不强制覆盖。
+- 操作日志保存在 Windows `%LOCALAPPDATA%/FileSortLite/history` 或 Linux `~/.local/state/FileSortLite/history`（可由 `XDG_STATE_HOME` 覆盖），不放在整理目录里。
+- API 密钥不会保存到配置文件或日志里；可使用自己的代理与自定义兼容接口。
+
+**已知边界：** 本版按顶层项目整理，不对文件正文、图像内容进行本地分析，不支持按目录内部文件递归分类。网络服务看到文件名、类型、大小和现有文件夹名，请勿对敏感目录发送请求。极端并发文件系统变更、恶意程序造成的路径竞态不属于该版本的安全保证。建议先在备份副本上试用。
+
+## 开发及测试
 
 ```bash
-cmake -S app -B build
-cmake --build build --config Release
+python3 -m unittest discover -s tests -v
 ```
 
-To enable unit tests:
-
-```bash
-cmake -S app -B build-tests -DAI_FILE_SORTER_BUILD_TESTS=ON
-cmake --build build-tests
-ctest --test-dir build-tests --output-on-failure
-```
-
-Some platforms require additional Qt/vcpkg/PDFium/media dependencies; see the existing build scripts and documentation in this repository.
-
-## Data files added by this fork
-
-The fork stores its lightweight additions in the existing application data directory:
-
-- `prompt_override.txt` — prompt override state and text;
-- `file_rules.tsv` — user-defined deterministic rules.
-
-No vector database or embedding store is introduced.
-
-## Development scope
-
-This fork intentionally stays small.
-
-### In scope
-
-- prompt visibility/editing;
-- deterministic rule mode;
-- visual safety review;
-- anomaly detection;
-- unit tests for rules and validation.
-
-### Out of scope
-
-- embedding-based routing;
-- RAG;
-- vector databases;
-- multi-agent workflows;
-- automatic deletion;
-- AI/rule hybrid mode.
-
-## Upstream
-
-Original project:
-
-- Repository: [hyperfield/ai-file-sorter](https://github.com/hyperfield/ai-file-sorter)
-- Architecture: [upstream docs/architecture.md](https://github.com/hyperfield/ai-file-sorter/blob/main/docs/architecture.md)
-
-This fork preserves the upstream copyright notices and license.
-
-## License and trademarks
-
-The source code is distributed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**, consistent with the upstream project.
-
-The upstream project also has a separate trademark policy. The name **FileSort Guard** is used here to distinguish this modified fork from the official upstream application. Upstream names, logos, icons, and other brand assets remain the property of their respective owners and should not be interpreted as branding or endorsement of this fork.
-
-See:
-
-- `LICENSE`
-- `TRADEMARKS.md`
-
-## Credits
-
-FileSort Guard is built on the work of the contributors to [hyperfield/ai-file-sorter](https://github.com/hyperfield/ai-file-sorter).
-
-The fork focuses on making AI-driven file operations easier to inspect, customize, and verify before they touch the filesystem.
+纯 Python 标准库核心，图形界面 Tkinter；支持 Windows 和 Linux。MIT/BSD 第三方运行库并非必要；仓库沿用原 AGPL-3.0 许可证（见 `LICENSE`）。感谢 [hyperfield/ai-file-sorter](https://github.com/hyperfield/ai-file-sorter) 原作者的工作。
