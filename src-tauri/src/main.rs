@@ -370,6 +370,8 @@ struct BrowserDirectory {
     entries: Vec<BrowserEntry>,
 }
 #[tauri::command]
+fn home_directory()->String{dirs::home_dir().unwrap_or_else(std::env::temp_dir).to_string_lossy().into_owned()}
+#[tauri::command]
 fn browse_directory(folder: String) -> Res<BrowserDirectory> {
     let dir = root(&folder)?;
     let mut entries = Vec::new();
@@ -400,7 +402,7 @@ fn browse_directory(folder: String) -> Res<BrowserDirectory> {
 
 fn main(){
  tauri::Builder::default().invoke_handler(tauri::generate_handler![
-  load_settings,save_settings,pick_folder,scan_folder,browse_directory,preview_plan,plan_by_rules,analyze_folder,fetch_models,apply_plan,list_history,undo_history
+  load_settings,save_settings,pick_folder,scan_folder,browse_directory,home_directory,preview_plan,plan_by_rules,analyze_folder,fetch_models,apply_plan,list_history,undo_history
  ]).run(tauri::generate_context!()).expect("FileSort Lite could not start");
 }
 #[cfg(test)]
