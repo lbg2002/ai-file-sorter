@@ -2,7 +2,7 @@ name: FileSort Lite · Rust Desktop
 
 on:
   push:
-    branches: [rust-ui-rebuild]
+    branches: [rust-ui-rebuild, original-ui-parity]
   pull_request:
   workflow_dispatch:
 
