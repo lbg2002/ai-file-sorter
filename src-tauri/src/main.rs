@@ -414,7 +414,7 @@ fn rule_matches(r:&FileRule,item:&Item,base:&str)->bool{
  let value=match r.field.as_str(){
   "extension"=>extension,
   "filename"=>item.name.to_lowercase(),
-  "path"=>format!("{base}/{}",item.name).to_lowercase(),
+  "path"=>format!("{base}/{}",if item.source_rel.is_empty(){&item.name}else{&item.source_rel}).to_lowercase(),
   "type"=>if item.kind=="folder"{"directory".into()}else{"file".into()},
   "size"=>item.size.to_string(),
   _=>return false
