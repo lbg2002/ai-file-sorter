@@ -105,6 +105,13 @@
   <div class="history-body"><aside id="history-list"></aside><div id="history-detail"></div></div>
   <footer class="dialog-footer"><button id="history-refresh">刷新记录</button><button id="history-undo">撤销所选记录</button><button id="history-close">关闭</button></footer>
  </section></div>
+<div class="overlay" id="peek-overlay" hidden>
+ <section class="dialog peek-dialog" role="dialog" aria-modal="true" aria-labelledby="peek-title">
+  <header class="dialog-title"><strong id="peek-title">文件预览</strong><button id="close-peek" title="关闭">×</button></header>
+  <div class="peek-body"><img id="peek-image" alt="文件图像预览" hidden><pre id="peek-text" hidden></pre><div id="peek-meta" hidden></div></div>
+  <footer class="dialog-footer"><span id="peek-size">只读预览 · 不会上传文件正文</span><button id="peek-close">关闭</button></footer>
+ </section>
+</div>
 <div class="overlay" id="busy-overlay" hidden><section class="dialog busy-dialog"><header class="dialog-title"><strong>正在分析所选文件夹</strong></header><div class="busy-content"><div class="spinner"></div><strong id="busy-stage">扫描文件</strong><p>整批生成分类建议。实际移动前会打开独立审核窗口。</p></div></section></div>
 <div id="toast" role="status" aria-live="polite" hidden></div>
 </body></html>
