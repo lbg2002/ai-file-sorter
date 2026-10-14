@@ -3,7 +3,7 @@ const $=id=>document.getElementById(id);
 const inv=(cmd,args={})=>window.__TAURI__?.core?.invoke(cmd,args)??Promise.reject(Error("必须在桌面应用中运行"));
 const html=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const S={home:"",path:"",browser:null,tree:[],scan:null,assign:[],issues:[],preview:null,selected:new Set(),mode:"ai",view:"folder",busy:false,lists:{},settings:null,defaultPrompt:"",history:[],historyId:"",sort:"name",reverse:false,draft:null};
-const opts=()=>({includeFolders:$("include-folders").checked,includeFiles:$("include-files").checked,subcategories:$("subcategories").checked,style:document.querySelector("input[name=style]:checked")?.value||"refined"});
+const opts=()=>({includeFolders:$("include-folders").checked,includeFiles:$("include-files").checked,subcategories:$("subcategories").checked,includeRecursive:$("recursive").checked,style:document.querySelector("input[name=style]:checked")?.value||"refined"});
 const pathJoin=(p,n)=>p+(p.endsWith("/")||p.endsWith("\\")?"":p.includes("\\")?"\\":"/")+n;
 const dt=t=>new Date(Number(t)*1000).toLocaleString("zh-CN",{hour12:false});
 function toast(m,err=false){let o=$("toast");o.hidden=false;o.textContent=String(m);o.style.background=err?"#9f3448":"#263a59";clearTimeout(o._t);o._t=setTimeout(()=>o.hidden=true,5000)}
@@ -72,7 +72,7 @@ function listOptions(){
  $("list-preset").value=names.includes(sel)?sel:names[0];
  $("list-categories").value=S.lists[$("list-preset").value].join("\n");
 }
-function settings(){return {endpoint:$("cfg-endpoint").value.trim(),model:$("cfg-model").value.trim(),prompt:$("cfg-prompt").value,rules:$("cfg-rules").value,includeFolders:opts().includeFolders,theme:$("cfg-theme").value}}
+function settings(){return {endpoint:$("cfg-endpoint").value.trim(),model:$("cfg-model").value.trim(),prompt:$("cfg-prompt").value,rules:$("cfg-rules").value,includeFolders:opts().includeFolders,recursive:opts().includeRecursive,theme:$("cfg-theme").value}}
 function openSettings(tab="api"){
  for(let b of document.querySelectorAll(".settings-tabs button"))b.classList.toggle("active",b.dataset.tab===tab);
  for(let p of document.querySelectorAll(".tab-content"))p.classList.toggle("active",p.id==="settings-"+tab);
@@ -98,8 +98,8 @@ async function analyze(){
  if(!S.path)return toast("先选择文件夹",true);
  if(!opts().includeFiles&&!opts().includeFolders)return toast("至少勾选文件或文件夹",true);
  const result=await task("正在整批分析文件夹",async()=>{
-  if(S.mode==="rules")return inv("plan_by_rules",{folder:S.path,includeFolders:opts().includeFolders,includeFiles:opts().includeFiles,rules:settings().rules});
-  return inv("analyze_folder",{folder:S.path,includeFolders:opts().includeFolders,includeFiles:opts().includeFiles,endpoint:settings().endpoint,model:settings().model,apiKey:$("cfg-key").value,prompt:stylePrompt()});
+  if(S.mode==="rules")return inv("plan_by_rules",{folder:S.path,includeFolders:opts().includeFolders,includeFiles:opts().includeFiles,includeRecursive:opts().includeRecursive,rules:settings().rules});
+  return inv("analyze_folder",{folder:S.path,includeFolders:opts().includeFolders,includeFiles:opts().includeFiles,includeRecursive:opts().includeRecursive,endpoint:settings().endpoint,model:settings().model,apiKey:$("cfg-key").value,prompt:stylePrompt()});
  });
  if(!result)return;
  S.scan=result.scan;S.assign=result.assignments.map(a=>({...a,suggested_name:a.suggested_name||""}));S.issues=result.issues||[];
@@ -238,6 +238,19 @@ function startEvents(){
  let grip=$("explorer-grip"),down=false;grip.onpointerdown=e=>{down=true;grip.setPointerCapture(e.pointerId)};grip.onpointermove=e=>{if(down)$("explorer").style.width=Math.max(145,Math.min(innerWidth*.45,e.clientX))+"px"};grip.onpointerup=()=>down=false;
  document.querySelectorAll("input[name=organize-mode]").forEach(n=>n.onchange=modeChange);
  $("use-whitelist").onchange=modeChange;
+ const clearScan=()=>{S.scan=null;S.assign=[];S.preview=null;S.issues=[];S.selected.clear();S.view="folder";folderRows();};
+ $("recursive").onchange=e=>{
+  if(e.target.checked){$("include-folders").checked=false;$("include-files").checked=true;}
+  clearScan();
+ };
+ $("include-folders").onchange=e=>{
+  if(e.target.checked)$("recursive").checked=false;
+  clearScan();
+ };
+ $("include-files").onchange=e=>{
+  if(!e.target.checked)$("recursive").checked=false;
+  clearScan();
+ };
  $("analyze").onclick=analyze;
  $("review-rows").onchange=reviewChanged;
  $("review-rows").onclick=e=>{const button=e.target.closest("[data-peek]");if(button){openPeek(button.dataset.peek);return;}let tr=e.target.closest("tr");if(tr&&!e.target.closest("input"))tr.classList.toggle("row-highlight")};
@@ -314,7 +327,7 @@ async function init(){
   S.home=home;S.settings=s;S.defaultPrompt=s.prompt;S.lists=JSON.parse(localStorage.getItem("filesort.whitelist")||"null")||{默认:["论文文献","文档","图片","表格"]};
   for(let id of ["endpoint","model","prompt","rules","theme"])$("cfg-"+id).value=s[id];
   document.body.dataset.theme=s.theme==="dark"?"dark":"light";
-  $("include-folders").checked=!!s.includeFolders;
+  $("include-folders").checked=!!s.includeFolders;$("recursive").checked=!!s.recursive;
   listOptions();modeChange();
   $("quick-locations").innerHTML=[["⌂","用户主目录",home],["▰","下载",pathJoin(home,"Downloads")],["▰","桌面",pathJoin(home,"Desktop")],["▰","文档",pathJoin(home,"Documents")]].map(([ic,lab,path])=>'<button class="quick-item" data-path="'+html(path)+'"><span>'+ic+'</span> '+lab+'</button>').join("");
   S.tree=[{path:home,open:false,children:[]}];

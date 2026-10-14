@@ -20,7 +20,7 @@
         <label><input id="subcategories" type="checkbox">使用子分类</label>
         <label><input id="include-files" type="checkbox" checked>分类文件</label>
         <label><input id="include-folders" type="checkbox">分类文件夹</label>
-        <label title="当前版本尚未支持递归扫描，避免损坏项目目录"><input type="checkbox" disabled>包含子文件夹内的文件</label>
+        <label title="递归扫描子目录内的文件，与整体移动顶层文件夹互斥"><input id="recursive" type="checkbox">包含子目录中的文件</label>
       </div>
       <div class="extra-row">
         <label title="使用远程多模态 API 分析图像内容，启用后可能发送图像数据"><input id="picture-analysis" type="checkbox" disabled>按图片内容分析 <small>（多模态 API 接入中）</small></label>
