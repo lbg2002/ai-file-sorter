@@ -289,6 +289,38 @@ mod tests{
  use super::*;
  #[test]fn invalid_names(){for s in ["../x","a/b","CON","LPT1","name.",".",""]{assert!(!category_ok(s));}assert!(category_ok("论文资料"));}
  #[test]fn requires_https(){assert!(api_url("http://example.com/v1",false).is_err());assert!(api_url("https://example.com/v1",false).is_ok());}
+ #[test]fn move_and_undo_roundtrip(){
+  let unique=SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+  let base=std::env::temp_dir().join(format!("filesort-test-{}-{unique}",std::process::id()));
+  fs::create_dir(&base).unwrap();
+  fs::write(base.join("paper.pdf"),b"temporary file").unwrap();
+  let path=base.to_string_lossy().to_string();
+  let current=scan(&path,false).unwrap();
+  let assignments=vec![Assignment{id:current.items[0].id.clone(),category:"论文".into()}];
+  assert_eq!(preview(&path,&current.items,&assignments).unwrap().movable,1);
+  let journal_id=apply(&path,&current.items,&assignments).unwrap();
+  assert!(base.join("论文").join("paper.pdf").exists());
+  let result=undo(&journal_id).unwrap();
+  assert_eq!(result.restored,1);
+  assert!(result.errors.is_empty());
+  assert!(base.join("paper.pdf").exists());
+  fs::remove_dir_all(base).unwrap();
+ }
+ #[test]fn refuses_existing_destination(){
+  let unique=SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+  let base=std::env::temp_dir().join(format!("filesort-conflict-{}-{unique}",std::process::id()));
+  fs::create_dir(&base).unwrap();
+  fs::write(base.join("paper.pdf"),b"first").unwrap();
+  fs::create_dir(base.join("论文")).unwrap();
+  fs::write(base.join("论文/paper.pdf"),b"do not overwrite").unwrap();
+  let path=base.to_string_lossy().to_string();
+  let current=scan(&path,false).unwrap();
+  let assignments=vec![Assignment{id:current.items[0].id.clone(),category:"论文".into()}];
+  assert!(!preview(&path,&current.items,&assignments).unwrap().issues.is_empty());
+  assert!(apply(&path,&current.items,&assignments).is_err());
+  assert_eq!(fs::read(base.join("论文/paper.pdf")).unwrap(),b"do not overwrite");
+  fs::remove_dir_all(base).unwrap();
+ }
  #[test]fn detects_model_hallucinations(){
   let items=vec![Item{id:"1".into(),name:"test.pdf".into(),kind:"file".into(),size:1,mtime_ns:"0".into()}];
   let (_,issues)=parse_moves(r#"{"moves":[{"id":"1","category":"论文"},{"id":"2","category":"其他"},{"id":"1","category":"重复"}]}"#,&items).unwrap();
