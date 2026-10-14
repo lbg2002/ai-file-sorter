@@ -119,6 +119,17 @@ function issues(){
  }
  return list;
 }
+function updateReviewFilter(){
+ const query=$("review-search").value.trim().toLocaleLowerCase();
+ const selected=$("review-status-filter").value;
+ let visible=0,total=0;
+ for(const row of $("review-rows").querySelectorAll("tr[data-id]")){
+  total++;
+  row.hidden=!!((query&&!(row.dataset.search||"").toLocaleLowerCase().includes(query))||(selected!=="all"&&row.dataset.status!==selected));
+  if(!row.hidden)visible++;
+ }
+ $("review-visible-count").textContent=visible===total?total+" 项":visible+" / "+total+" 项";
+}
 function review(open=false){
  if(!S.scan)return;
  if(open)modal("review");
@@ -134,14 +145,19 @@ function review(open=false){
    let a=assign.get(i.id)||{category:"",suggested_name:""},r=rows.get(i.id);
    let [cat="",sub=""]=a.category.split("/"),to=pathJoin(cat?pathJoin(S.scan.root,a.category):S.scan.root,a.suggested_name||i.name);
    let bad=!["可移动","仅重命名","保留原位"].includes(r?.status);
-   return '<tr data-id="'+html(i.id)+'" class="'+(bad?"row-error":"")+'"><td><input type="checkbox" class="review-select" '+(S.selected.has(i.id)?"checked":"")+'></td>'+
-   '<td title="'+html(i.sourceRel||i.name)+'">'+html(i.sourceRel||i.name)+'<button class="review-file-open" data-peek="'+html(i.sourceRel||i.name)+'" title="预览文件">◉</button></td><td>'+(i.kind==="folder"?"▰ 文件夹":"▤ 文件")+'</td>'+
+   const name=i.sourceRel||i.name;
+   const stateName=r?.status||"遗漏";
+   const tone=bad?"error":stateName==="保留原位"?"keep":"move";
+   const searchable=[name,cat,sub,to,a.suggested_name,stateName].join(" ");
+   return '<tr data-id="'+html(i.id)+'" data-search="'+html(searchable)+'" data-status="'+tone+'" class="'+(bad?"row-error":"")+'"><td><input type="checkbox" class="review-select" '+(S.selected.has(i.id)?"checked":"")+'></td>'+
+   '<td title="'+html(i.sourceRel||i.name)+'">'+html(i.sourceRel||i.name)+'<button class="review-file-open" data-peek="'+html(i.sourceRel||i.name)+'" title="预览文件">◉</button></td><td class="type-cell"><span class="type-icon '+(i.kind==="folder"?"folder":"file")+'"></span>'+(i.kind==="folder"?"文件夹":"文件")+'</td>'+
    '<td><input type="text" class="review-name" value="'+html(a.suggested_name)+'" placeholder="'+html(i.name)+'"></td>'+
    '<td><input type="text" class="review-category" value="'+html(cat)+'" placeholder="保留原位"></td>'+
    '<td><input type="text" class="review-subcategory" value="'+html(sub)+'" '+(opts().subcategories?"":"disabled")+'></td>'+
-   '<td>'+html(r?.status||"遗漏")+'</td><td class="destination" title="'+html(to)+'">'+html(to)+'</td></tr>';
+   '<td><span class="review-status-pill '+tone+'">'+html(stateName)+'</span></td><td class="destination" title="'+html(to)+'">'+html(to)+'</td></tr>';
  }).join("");
  $("review-footnote").textContent=issues().length?"存在校验异常，不允许执行":"审核后确认；文件将由 Rust 严格校验并记录";
+ updateReviewFilter();
 }
 async function reviewChanged(e){
  const tr=e.target.closest("tr[data-id]");if(!tr)return;
@@ -161,7 +177,9 @@ function previewMoves(){
  let a=new Map(chosen().map(x=>[x.id,x]));
  $("preview-rows").innerHTML=S.scan.items.map(i=>{
   let x=a.get(i.id);if(!x.category&&(!x.suggested_name||x.suggested_name===i.name))return"";
-  let src=pathJoin(S.scan.root,i.name),dst=pathJoin(x.category?pathJoin(S.scan.root,x.category):S.scan.root,x.suggested_name||i.name);
+  let src=pathJoin(S.scan.root,i.sourceRel||i.name);
+  let srcDir=src.substring(0,Math.max(src.lastIndexOf("/"),src.lastIndexOf("\\")));
+  let dst=pathJoin(x.category?pathJoin(S.scan.root,x.category):(srcDir||S.scan.root),x.suggested_name||i.name);
   return "<tr><td>"+html(src)+"</td><td>"+html(dst)+"</td><td>"+(x.category?"移动":"重命名")+"</td></tr>";
  }).join("");
  modal("preview");
@@ -253,6 +271,8 @@ function startEvents(){
  };
  $("analyze").onclick=analyze;
  $("review-rows").onchange=reviewChanged;
+ $("review-search").addEventListener("input",updateReviewFilter);
+ $("review-status-filter").addEventListener("change",updateReviewFilter);
  $("review-rows").onclick=e=>{const button=e.target.closest("[data-peek]");if(button){openPeek(button.dataset.peek);return;}let tr=e.target.closest("tr");if(tr&&!e.target.closest("input"))tr.classList.toggle("row-highlight")};
  $("review-all").onchange=async e=>{S.selected=new Set(e.target.checked?S.scan.items.map(i=>i.id):[]);await validate();review()};
   async function selectAutomatic(){
