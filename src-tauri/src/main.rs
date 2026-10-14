@@ -551,9 +551,8 @@ struct FilePeek {
 #[tauri::command]
 fn file_preview(folder:String,name:String)->Res<FilePeek>{
  use std::io::Read;
- if !name_ok(&name){return Err("非法文件名".into());}
  let base=root(&folder)?;
- let path=base.join(&name);
+ let path=secure_rel_path(&base,&name)?;
  let meta=fs::symlink_metadata(&path).map_err(|e|e.to_string())?;
  if meta.file_type().is_symlink()||!meta.is_file(){return Err("不能预览符号链接或目录".into());}
  let ext=path.extension().and_then(|s|s.to_str()).unwrap_or("").to_lowercase();
