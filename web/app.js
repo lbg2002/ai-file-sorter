@@ -143,7 +143,10 @@ function review(open=false){
  $("repair-result").hidden=S.issues.length===0;
  $("review-rows").innerHTML=S.scan.items.map(i=>{
    let a=assign.get(i.id)||{category:"",suggested_name:""},r=rows.get(i.id);
-   let [cat="",sub=""]=a.category.split("/"),to=pathJoin(cat?pathJoin(S.scan.root,a.category):S.scan.root,a.suggested_name||i.name);
+   let [cat="",sub=""]=a.category.split("/");
+   let src=pathJoin(S.scan.root,i.sourceRel||i.name);
+   let srcDir=src.substring(0,Math.max(src.lastIndexOf("/"),src.lastIndexOf("\\")));
+   let to=pathJoin(cat?pathJoin(S.scan.root,a.category):(srcDir||S.scan.root),a.suggested_name||i.name);
    let bad=!["可移动","仅重命名","保留原位"].includes(r?.status);
    const name=i.sourceRel||i.name;
    const stateName=r?.status||"遗漏";
@@ -240,6 +243,18 @@ function startEvents(){
   pop.onclick=async e=>{let n=e.target.closest("[data-n]");if(n){pop.hidden=true;try{await entries[Number(n.dataset.n)][1]()}catch(e){toast(e,true)}}};
  });
  document.addEventListener("click",e=>{if(!e.target.closest(".app-menu"))$("menu-popup").hidden=true});
+ document.addEventListener("keydown",async e=>{
+  if(e.key==="Escape"){
+    const dialogs=["peek","preview","bulk","settings","history","review"];
+    for(const d of dialogs){if(!$(d+"-overlay").hidden){modal(d,false);break;}}
+    $("menu-popup").hidden=true;return;
+  }
+  const typing=["INPUT","TEXTAREA","SELECT"].includes(document.activeElement?.tagName);
+  if(!(e.ctrlKey||e.metaKey)||e.altKey)return;
+  if(e.key.toLowerCase()==="o"){e.preventDefault();try{let p=await inv("pick_folder");if(p)navigate(p)}catch(err){toast(err,true)}}
+  if(e.key.toLowerCase()==="b"&&!typing){e.preventDefault();let panel=$("explorer");panel.hidden=!panel.hidden;$("explorer-grip").hidden=panel.hidden}
+  if(e.key.toLowerCase()==="r"&&!typing){e.preventDefault();if(S.path)navigate(S.path)}
+ });
  $("quick-locations").onclick=e=>{let b=e.target.closest("[data-path]");if(b)navigate(b.dataset.path)};
  $("explorer-tree").onclick=e=>{let n=e.target.closest("[data-path]");if(!n)return;if(e.target.closest("[data-expand]"))expand(n.dataset.path);else navigate(n.dataset.path)};
  $("folder").onkeydown=e=>{if(e.key==="Enter")navigate(e.target.value)};
@@ -253,7 +268,11 @@ function startEvents(){
  $("browser-head").onclick=e=>{let th=e.target.closest("[data-sort]");if(!th)return;S.reverse=S.sort===th.dataset.sort?!S.reverse:false;S.sort=th.dataset.sort;folderRows()};
  $("switch-results").onclick=()=>{if(!S.scan){toast("未生成分类结果");return}S.view=S.view==="folder"?"results":"folder";folderRows()};
  $("hide-explorer").onclick=()=>{$("explorer").hidden=true;$("explorer-grip").hidden=true};
- let grip=$("explorer-grip"),down=false;grip.onpointerdown=e=>{down=true;grip.setPointerCapture(e.pointerId)};grip.onpointermove=e=>{if(down)$("explorer").style.width=Math.max(145,Math.min(innerWidth*.45,e.clientX))+"px"};grip.onpointerup=()=>down=false;
+ let grip=$("explorer-grip"),down=false;
+ grip.onpointerdown=e=>{down=true;grip.setPointerCapture(e.pointerId)};
+ grip.onpointermove=e=>{if(down)$("explorer").style.width=Math.max(165,Math.min(innerWidth*.48,e.clientX))+"px"};
+ grip.onpointerup=()=>{down=false;try{localStorage.setItem("filesort.explorer.width",$("explorer").style.width)}catch{}};
+ grip.onpointercancel=()=>{down=false};
  document.querySelectorAll("input[name=organize-mode]").forEach(n=>n.onchange=modeChange);
  $("use-whitelist").onchange=modeChange;
  const clearScan=()=>{S.scan=null;S.assign=[];S.preview=null;S.issues=[];S.selected.clear();S.view="folder";folderRows();};
@@ -344,6 +363,8 @@ async function init(){
  startEvents();
  try{
   let [s,home]=await Promise.all([inv("load_settings"),inv("home_directory")]);
+  const savedExplorerWidth=localStorage.getItem("filesort.explorer.width");
+  if(savedExplorerWidth&&/^\d+(?:\.\d+)?px$/.test(savedExplorerWidth))$("explorer").style.width=savedExplorerWidth;
   S.home=home;S.settings=s;S.defaultPrompt=s.prompt;S.lists=JSON.parse(localStorage.getItem("filesort.whitelist")||"null")||{默认:["论文文献","文档","图片","表格"]};
   for(let id of ["endpoint","model","prompt","rules","theme"])$("cfg-"+id).value=s[id];
   document.body.dataset.theme=s.theme==="dark"?"dark":"light";
