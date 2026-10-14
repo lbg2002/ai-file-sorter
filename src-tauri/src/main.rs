@@ -63,7 +63,7 @@ fn directory_is_safe(root:&Path,category:&str)->bool {
  true
 }
 fn root(s:&str)->Res<PathBuf>{let p=fs::canonicalize(s).map_err(|e|format!("无法打开目录：{e}"))?;if !p.is_dir(){return Err("请选择文件夹".into());}Ok(p)}
-fn scan(s:&str,include_folders:bool)->Res<Scan>{
+fn scan(s:&str,include_folders:bool,include_files:bool)->Res<Scan>{
  let dir=root(s)?;let mut entries=fs::read_dir(&dir).map_err(|e|e.to_string())?.filter_map(Result::ok).collect::<Vec<_>>();
  entries.sort_by_key(|x|x.file_name().to_string_lossy().to_lowercase());
  let(mut items,mut existing_folders,mut ignored)=(vec![],vec![],vec![]);
@@ -73,7 +73,7 @@ fn scan(s:&str,include_folders:bool)->Res<Scan>{
    let m=match fs::symlink_metadata(e.path()){Ok(v)=>v,Err(_)=>{ignored.push(name);continue;}};
    if m.file_type().is_symlink(){ignored.push(name);continue;}
    if m.is_dir()&&category_ok(&name){existing_folders.push(name.clone());}
-   if !(m.is_file()||(include_folders&&m.is_dir())){continue;}
+   if !((include_files&&m.is_file())||(include_folders&&m.is_dir())){continue;}
    if items.len()>=600{return Err("当前目录超过 600 项；已取消，未截断清单。".into());}
    items.push(Item{id:(items.len()+1).to_string(),name,kind:if m.is_dir(){"folder"}else{"file"}.into(),size:m.len(),mtime_ns:mtime(&m)});
  }
@@ -292,12 +292,12 @@ fn save_settings(settings:Settings)->Res<()>{
 #[tauri::command]
 fn pick_folder()->Option<String>{rfd::FileDialog::new().pick_folder().map(|p|p.to_string_lossy().to_string())}
 #[tauri::command]
-fn scan_folder(folder:String,include_folders:bool)->Res<Scan>{scan(&folder,include_folders)}
+fn scan_folder(folder:String,include_folders:bool,include_files:bool)->Res<Scan>{scan(&folder,include_folders,include_files)}
 #[tauri::command]
 fn preview_plan(folder:String,items:Vec<Item>,assignments:Vec<Assignment>)->Res<Preview>{preview(&folder,&items,&assignments)}
 #[tauri::command]
-fn plan_by_rules(folder:String,include_folders:bool,rules:String)->Res<Analysis>{
- let scan=scan(&folder,include_folders)?;
+fn plan_by_rules(folder:String,include_folders:bool,include_files:bool,rules:String)->Res<Analysis>{
+ let scan=scan(&folder,include_folders,include_files)?;
  let mut categories=HashMap::new();
  for line in rules.lines(){if let Some((exts,cat))=line.split_once('='){if !category_ok(cat.trim()){continue;}for ext in exts.split(','){categories.insert(ext.trim().trim_start_matches('.').to_lowercase(),cat.trim().to_string());}}}
  let assignments=scan.items.iter().map(|i|{
@@ -307,9 +307,9 @@ fn plan_by_rules(folder:String,include_folders:bool,rules:String)->Res<Analysis>
  Ok(Analysis{scan,assignments,issues:vec![]})
 }
 #[tauri::command]
-async fn analyze_folder(folder:String,include_folders:bool,endpoint:String,model:String,api_key:String,prompt:String)->Res<Analysis>{
+async fn analyze_folder(folder:String,include_folders:bool,include_files:bool,endpoint:String,model:String,api_key:String,prompt:String)->Res<Analysis>{
  if model.trim().is_empty(){return Err("模型名不能为空".into());}
- let scan=scan(&folder,include_folders)?;
+ let scan=scan(&folder,include_folders,include_files)?;
  if scan.items.is_empty(){return Err("目录中没有可整理项目".into());}
  let manifest=json!({"existing_folders":scan.existing_folders,"items":scan.items.iter().map(|i|json!({"id":i.id,"name":i.name,"type":i.kind,"bytes":i.size})).collect::<Vec<_>>()});
  let m=serde_json::to_string(&manifest).map_err(|e|e.to_string())?;
@@ -416,7 +416,7 @@ mod tests{
   fs::create_dir(&base).unwrap();
   fs::write(base.join("paper.pdf"),b"temporary file").unwrap();
   let path=base.to_string_lossy().to_string();
-  let current=scan(&path,false).unwrap();
+  let current=scan(&path,false,true).unwrap();
   let assignments=vec![Assignment{id:current.items[0].id.clone(),category:"论文".into(),suggested_name:String::new()}];
   assert_eq!(preview(&path,&current.items,&assignments).unwrap().movable,1);
   let journal_id=apply(&path,&current.items,&assignments).unwrap();
@@ -435,7 +435,7 @@ mod tests{
   fs::create_dir(base.join("论文")).unwrap();
   fs::write(base.join("论文/paper.pdf"),b"do not overwrite").unwrap();
   let path=base.to_string_lossy().to_string();
-  let current=scan(&path,false).unwrap();
+  let current=scan(&path,false,true).unwrap();
   let assignments=vec![Assignment{id:current.items[0].id.clone(),category:"论文".into(),suggested_name:String::new()}];
   assert!(!preview(&path,&current.items,&assignments).unwrap().issues.is_empty());
   assert!(apply(&path,&current.items,&assignments).is_err());
