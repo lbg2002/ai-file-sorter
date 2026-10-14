@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FileSort Lite</title>
+<link rel="stylesheet" href="style.css">
+<script src="app.js" defer></script>
+</head>
+<body data-theme="dark">
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand"><div class="brand-icon">⌑</div><div><strong>FileSort<span>Lite</span></strong><small>智能文件整理</small></div></div>
+    <div class="sidebar-caption">工作空间</div>
+    <nav class="nav">
+      <button class="nav-item active" data-page="work"><span class="nav-icon">◫</span><span>整理工作台</span></button>
+      <button class="nav-item" data-page="history"><span class="nav-icon">◷</span><span>操作历史</span><span id="hist-count" class="nav-count">0</span></button>
+    </nav>
+    <div class="sidebar-bottom">
+      <button class="nav-item" data-page="settings"><span class="nav-icon">⚙</span><span>设置</span></button>
+      <div class="sidebar-divider"></div>
+      <div class="connection"><i></i><div><strong>API-only 运行模式</strong><small>无本地模型 · 数据由你掌控</small></div></div>
+      <div class="version">FILE SORT LITE <span>v0.2.0</span></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-breadcrumb">工作空间 <span>/</span> <b id="crumb">整理工作台</b></div>
+      <div id="top-status" class="top-status"><i></i><span>准备就绪</span></div>
+    </header>
+
+    <section id="page-work" class="page active">
+      <div class="page-heading">
+        <div><div class="eyebrow">ORGANIZE · PLAN · REVIEW</div><h1>让文件各归其位<span class="dot">.</span></h1><p>一次规划整个文件夹，确认每一步，再放心整理。</p></div>
+        <button class="ghost-btn" id="open-settings">⚙ 连接设置</button>
+      </div>
+      <div class="folder-panel panel">
+        <div class="panel-title"><span class="round-icon folder-icon">▱</span><div><strong>需要整理的文件夹</strong><small>仅扫描顶层项目；原有文件夹默认保持不动</small></div></div>
+        <div class="folder-row">
+          <div class="folder-input-wrap"><span>⌁</span><input id="folder-input" spellcheck="false" placeholder="选择电脑上的文件夹路径…"></div>
+          <button class="soft-btn" id="choose-folder">浏览文件夹</button>
+          <button class="primary-btn" id="btn-scan">扫描目录 <span>↗</span></button>
+        </div>
+        <div class="folder-options"><label class="checkline"><input type="checkbox" id="include-folders"><span>允许把现有顶层文件夹作为整体移动</span></label><span id="scan-note">尚未扫描</span></div>
+      </div>
+      <div class="section-head">
+        <div><h2>智能整理方案</h2><span id="plan-subtitle">先扫描文件夹，然后生成方案</span></div>
+        <div class="segmented"><button class="active" data-mode="ai">✦ AI 整理</button><button data-mode="rules">◇ 规则整理</button></div>
+      </div>
+      <div class="planning-bar panel">
+        <div class="plan-desc"><span id="plan-mode-icon" class="round-icon violet-icon">✦</span><div><strong id="plan-mode-label">整批 AI 智能规划</strong><small id="plan-mode-desc">整个清单只调用一次 API；优先复用已有目录</small></div></div>
+        <div class="plan-buttons"><button class="soft-btn" id="repair-plan" hidden>处理遗漏项</button><button class="primary-btn" id="btn-plan">✦ 生成整理方案</button></div>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat panel"><div class="stat-label">已扫描文件</div><strong id="stat-all">—</strong><small>本次扫描</small><span class="stat-symbol">▧</span></div>
+        <div class="stat panel"><div class="stat-label">计划移动</div><strong id="stat-move">—</strong><small>待确认操作</small><span class="stat-symbol">↗</span></div>
+        <div class="stat panel"><div class="stat-label">保留原位</div><strong id="stat-keep">—</strong><small>不参与移动</small><span class="stat-symbol">⊙</span></div>
+        <div class="stat panel"><div class="stat-label">风险与异常</div><strong id="stat-issue">—</strong><small>需人工审查</small><span class="stat-symbol">⚑</span></div>
+      </div>
+
+      <div class="review-layout">
+        <section class="review-panel panel">
+          <div class="review-top">
+            <div><h2>移动预览 <span class="hint">支持直接修改目标分类</span></h2><small>只有确认执行后才实际修改文件系统</small></div>
+            <div class="review-actions"><button class="icon-btn" id="btn-rescan" title="重新扫描">↻</button></div>
+          </div>
+          <div class="table-tools">
+            <div class="searchbox"><span>⌕</span><input id="search-file" placeholder="搜索文件或目标分类"></div>
+            <select id="status-filter"><option value="all">全部状态</option><option value="movable">可移动</option><option value="kept">保留原位</option><option value="error">异常</option></select>
+          </div>
+          <div class="bulk-bar" id="bulk-bar" hidden><span id="selected-count">已选择 0 项</span><input id="bulk-category" list="category-options" placeholder="目标目录（留空则不移动）"><button class="soft-btn" id="bulk-apply">批量设置</button><button class="text-btn" id="clear-selection">清空选择</button></div>
+          <div class="table-scroll">
+            <table class="file-table"><thead><tr><th class="select-cell"><input type="checkbox" id="select-all"></th><th>文件 / 文件夹</th><th>类型</th><th>目标分类 <span class="th-helper">可编辑</span></th><th>校验状态</th></tr></thead><tbody id="file-rows"><tr><td colspan="5"><div class="empty"><div class="empty-mark">▤</div><strong>还没有文件清单</strong><span>请选择一个文件夹并开始扫描</span></div></td></tr></tbody></table>
+          </div>
+          <datalist id="category-options"></datalist>
+          <div class="review-footer"><div><span id="table-foot">0 个项目</span><span class="footer-divider">·</span><span id="validation-summary">暂无整理方案</span></div><button class="primary-btn" id="btn-apply" disabled>确认执行移动 <span>→</span></button></div>
+        </section>
+        <aside class="insights">
+          <div class="insight-card panel"><div class="insight-head"><h3>目标目录预览</h3><span class="mini-tag">PLAN</span></div><div id="category-preview" class="categories"><div class="muted-message">生成方案后展示目标目录分布</div></div></div>
+          <div class="insight-card panel"><div class="insight-head"><h3>安全校验</h3><span id="issue-counter" class="mini-tag">0</span></div><div id="issue-list" class="issues"><div class="success-line"><span>✓</span>等候方案检查</div></div></div>
+        </aside>
+      </div>
+    </section>
+
+    <section id="page-history" class="page">
+      <div class="page-heading"><div><div class="eyebrow">OPERATIONS · UNDO</div><h1>操作历史<span class="dot">.</span></h1><p>每次整理都有记录。发生冲突时不会强行覆盖文件。</p></div><button class="ghost-btn" id="refresh-history">↻ 刷新</button></div>
+      <div class="history-layout"><div class="panel history-list"><div class="panel-heading">整理记录 <span id="history-total"></span></div><div id="history-records"></div></div><div class="panel history-detail" id="history-detail"><div class="empty"><div class="empty-mark">◷</div><strong>选择一次整理记录</strong><span>查看移动详情与撤销操作</span></div></div></div>
+    </section>
+
+    <section id="page-settings" class="page">
+      <div class="page-heading"><div><div class="eyebrow">PREFERENCES · API</div><h1>设置<span class="dot">.</span></h1><p>仅保留真正需要的配置。API 密钥不写入本地磁盘。</p></div><button class="primary-btn" id="save-config">保存设置</button></div>
+      <div class="settings-stack">
+        <section class="panel setting-card"><div class="setting-heading"><span class="round-icon violet-icon">◇</span><div><h2>大模型 API</h2><p>支持 OpenAI 兼容服务及自定义地址</p></div></div><div class="form-grid"><label>接口地址<input id="cfg-endpoint" placeholder="https://api.example.com/v1"></label><label>模型名称<div class="field-combo"><input id="cfg-model" list="model-options" placeholder="模型 ID"><button id="fetch-models" title="读取 API 模型列表">↻</button></div></label><label class="full">API Key <span class="field-caption">仅保留在当前窗口内，关闭软件后清除</span><div class="field-combo"><input id="cfg-key" type="password" autocomplete="off" placeholder="输入 API Key（不会写入设置）"><button id="toggle-key" title="显示/隐藏密钥">◉</button></div></label></div><datalist id="model-options"></datalist></section>
+        <section class="panel setting-card"><div class="setting-heading"><span class="round-icon violet-icon">≡</span><div><h2>分类与提示词</h2><p>统一规划，优先沿用已有目录，避免过度细分</p></div></div><label class="wide-label">AI 系统提示词<textarea id="cfg-prompt" rows="7" spellcheck="false"></textarea></label><label class="wide-label">本地规则 <span class="field-caption">每行：扩展名,扩展名=分类名；未匹配的文件保持原位</span><textarea id="cfg-rules" rows="7" spellcheck="false"></textarea></label></section>
+        <section class="panel setting-card"><div class="setting-heading"><span class="round-icon violet-icon">◑</span><div><h2>外观与行为</h2><p>更少固定字段、更清晰的操作流程</p></div></div><div class="settings-inline"><span>主题</span><select id="cfg-theme"><option value="dark">深色</option><option value="light">浅色</option></select></div><label class="checkline"><input type="checkbox" id="cfg-folders"><span>默认允许移动顶层文件夹（建议保持关闭）</span></label></section>
+      </div>
+    </section>
+  </main>
+</div>
+<div id="modal-backdrop" class="modal-backdrop" hidden><div class="modal"><div class="modal-symbol">⚑</div><h3 id="modal-title">确认执行</h3><p id="modal-message"></p><div class="modal-actions"><button class="soft-btn" id="modal-cancel">取消</button><button class="primary-btn" id="modal-confirm">确认</button></div></div></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body></html>
