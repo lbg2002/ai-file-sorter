@@ -296,15 +296,91 @@ fn pick_folder()->Option<String>{rfd::FileDialog::new().pick_folder().map(|p|p.t
 fn scan_folder(folder:String,include_folders:bool,include_files:bool)->Res<Scan>{scan(&folder,include_folders,include_files)}
 #[tauri::command]
 fn preview_plan(folder:String,items:Vec<Item>,assignments:Vec<Assignment>)->Res<Preview>{preview(&folder,&items,&assignments)}
+#[derive(Debug)]
+struct FileRule {
+ field:String, operator:String, pattern:String, target:String, regex:Option<regex::Regex>
+}
+fn parse_file_rules(rules:&str)->Res<Vec<FileRule>>{
+ let mut result=Vec::new();
+ for (line_no, raw) in rules.lines().enumerate(){
+  let line=raw.trim();
+  if line.is_empty()||line.starts_with('#'){continue;}
+  if let Some((lhs,cat))=line.split_once("->"){
+    let parts=lhs.split('|').map(str::trim).collect::<Vec<_>>();
+    if parts.len()!=3 {return Err(format!("规则第 {} 行应为 字段 | 运算符 | 条件 -> 分类",line_no+1));}
+    let field=parts[0].to_lowercase();
+    let operator=parts[1].to_lowercase();
+    let pattern=parts[2].trim().to_string();
+    let target=cat.trim().replace(" / ","/").replace("/ ","/").replace(" /","/");
+    if !target_ok(&target)||target.is_empty(){return Err(format!("规则第 {} 行分类路径非法",line_no+1));}
+    if !["extension","filename","path","size","type"].contains(&field.as_str()){
+      return Err(format!("规则第 {} 行未知字段：{}",line_no+1,field));
+    }
+    if !["equals","contains","regex","startswith","endswith",">","<",">=","<="].contains(&operator.as_str()){
+      return Err(format!("规则第 {} 行未知运算符：{}",line_no+1,operator));
+    }
+    if field=="size"{
+      if ![">","<",">=","<=","equals"].contains(&operator.as_str())||pattern.parse::<u64>().is_err(){
+        return Err(format!("规则第 {} 行大小必须是字节整数且使用比较运算符",line_no+1));
+      }
+    }else if [">","<",">=","<="].contains(&operator.as_str()){
+      return Err(format!("规则第 {} 行比较运算符仅适用于 size",line_no+1));
+    }
+    let regex=if operator=="regex"{Some(regex::RegexBuilder::new(&pattern)
+        .case_insensitive(true).size_limit(2*1024*1024).build()
+        .map_err(|e|format!("规则第 {} 行正则错误：{e}",line_no+1))?)}else{None};
+    result.push(FileRule{field,operator,pattern,target,regex});
+  }else if let Some((extensions,category))=line.split_once('='){
+    let target=category.trim().to_string();
+    if !target_ok(&target)||target.is_empty(){return Err(format!("规则第 {} 行分类名非法",line_no+1));}
+    for part in extensions.split(','){
+      let ext=part.trim().trim_start_matches('.').to_lowercase();
+      if ext.is_empty() {return Err(format!("规则第 {} 行扩展名为空",line_no+1));}
+      result.push(FileRule{field:"extension".into(),operator:"equals".into(),pattern:ext,target:target.clone(),regex:None});
+    }
+  }else{
+    return Err(format!("规则第 {} 行格式不正确",line_no+1));
+  }
+ }
+ Ok(result)
+}
+fn rule_matches(r:&FileRule,item:&Item,base:&str)->bool{
+ let extension=Path::new(&item.name).extension().and_then(|e|e.to_str()).unwrap_or("").to_lowercase();
+ let value=match r.field.as_str(){
+  "extension"=>extension,
+  "filename"=>item.name.to_lowercase(),
+  "path"=>format!("{base}/{}",item.name).to_lowercase(),
+  "type"=>if item.kind=="folder"{"directory".into()}else{"file".into()},
+  "size"=>item.size.to_string(),
+  _=>return false
+ };
+ if r.field=="size"{
+  let Ok(limit)=r.pattern.parse::<u64>()else{return false;};
+  return match r.operator.as_str(){
+   ">"=>item.size>limit,"<"=>item.size<limit,">="=>item.size>=limit,
+   "<="=>item.size<=limit,"equals"=>item.size==limit,_=>false
+  };
+ }
+ let pattern=r.pattern.to_lowercase();
+ let cmp=if r.field=="extension"{pattern.trim_start_matches('.')}else{pattern.as_str()};
+ match r.operator.as_str(){
+  "equals"=>value==cmp,"contains"=>value.contains(cmp),
+  "startswith"=>value.starts_with(cmp),"endswith"=>value.ends_with(cmp),
+  "regex"=>r.regex.as_ref().is_some_and(|re|re.is_match(&value)),
+  _=>false
+ }
+}
+fn rule_plan(scan:&Scan,rules:&str)->Res<Vec<Assignment>>{
+ let parsed=parse_file_rules(rules)?;
+ Ok(scan.items.iter().map(|item|{
+  let target=parsed.iter().find(|r|rule_matches(r,item,&scan.root)).map(|r|r.target.clone()).unwrap_or_default();
+  Assignment{id:item.id.clone(),category:target,suggested_name:String::new()}
+ }).collect())
+}
 #[tauri::command]
 fn plan_by_rules(folder:String,include_folders:bool,include_files:bool,rules:String)->Res<Analysis>{
  let scan=scan(&folder,include_folders,include_files)?;
- let mut categories=HashMap::new();
- for line in rules.lines(){if let Some((exts,cat))=line.split_once('='){if !category_ok(cat.trim()){continue;}for ext in exts.split(','){categories.insert(ext.trim().trim_start_matches('.').to_lowercase(),cat.trim().to_string());}}}
- let assignments=scan.items.iter().map(|i|{
-   let ext=Path::new(&i.name).extension().and_then(|x|x.to_str()).unwrap_or("").to_lowercase();
-   Assignment{id:i.id.clone(),category:if i.kind=="folder"{String::new()}else{categories.get(&ext).cloned().unwrap_or_default()},suggested_name:String::new()}
- }).collect();
+ let assignments=rule_plan(&scan,&rules)?;
  Ok(Analysis{scan,assignments,issues:vec![]})
 }
 #[tauri::command]
@@ -409,6 +485,17 @@ fn main(){
 #[cfg(test)]
 mod tests{
  use super::*;
+ #[test]fn supports_original_multi_field_rules(){
+  let rules="extension | equals | .pdf -> 文献/PDF\nfilename | contains | meeting -> 会议\nsize | > | 100 -> 大文件\nfilename | regex | ^paper_ -> 论文";
+  let parsed=parse_file_rules(rules).unwrap();
+  assert_eq!(parsed.len(),4);
+  let i=Item{id:"1".into(),name:"paper_a.pdf".into(),kind:"file".into(),size:512,mtime_ns:"0".into()};
+  assert!(rule_matches(&parsed[0],&i,"/tmp"));
+  assert!(rule_matches(&parsed[2],&i,"/tmp"));
+  assert!(rule_matches(&parsed[3],&i,"/tmp"));
+  assert!(!rule_matches(&parsed[1],&i,"/tmp"));
+  assert!(parse_file_rules("filename | regex | ( -> 论文").is_err());
+ }
  #[test]fn invalid_names(){for s in ["../x","a/b","CON","LPT1","name.",".",""]{assert!(!category_ok(s));}assert!(category_ok("论文资料"));}
  #[test]fn requires_https(){assert!(api_url("http://example.com/v1",false).is_err());assert!(api_url("https://example.com/v1",false).is_ok());}
  #[test]fn move_and_undo_roundtrip(){
