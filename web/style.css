@@ -10,3 +10,12 @@ body{background:var(--bg);color:var(--text)}button,input,select,textarea{color:v
 .peek-body pre{margin:0;width:100%;padding:10px;background:var(--stripe);border:1px solid var(--border);white-space:pre-wrap;word-break:break-word;line-height:1.6;user-select:text;font:12px monospace}
 #peek-meta{width:100%;padding:25px;color:var(--muted);line-height:1.9}
 .review-file-open{background:transparent;border:0;padding:3px 5px;margin-left:5px;color:var(--primary);font-size:12px}
+
+.bulk-dialog{width:min(520px,94vw)}
+.bulk-fields{padding:22px;display:flex;flex-direction:column;gap:17px}
+.bulk-fields>label{display:flex;flex-direction:column;gap:6px;font-size:12px}
+.bulk-fields>label:has(input[type=checkbox]){flex-direction:row;align-items:center}
+.bulk-fields input:not([type=checkbox]){width:100%;min-height:32px}
+.bulk-fields p{margin:0;color:var(--muted);line-height:1.65;font-size:11px}
+
+.rule-examples{padding:12px;line-height:1.55;background:var(--stripe);border:1px solid var(--border);font:11px monospace;white-space:pre-wrap}

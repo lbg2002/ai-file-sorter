@@ -242,7 +242,18 @@ function startEvents(){
  $("review-rows").onchange=reviewChanged;
  $("review-rows").onclick=e=>{const button=e.target.closest("[data-peek]");if(button){openPeek(button.dataset.peek);return;}let tr=e.target.closest("tr");if(tr&&!e.target.closest("input"))tr.classList.toggle("row-highlight")};
  $("review-all").onchange=async e=>{S.selected=new Set(e.target.checked?S.scan.items.map(i=>i.id):[]);await validate();review()};
- $("approve-categories").onchange=async e=>{S.selected=new Set(e.target.checked?S.scan.items.map(i=>i.id):[]);await validate();review()};
+  async function selectAutomatic(){
+  const catChecked=$("approve-categories").checked;
+  const namesChecked=$("approve-filenames").checked;
+  S.selected=new Set(S.assign.filter(a=>{
+    const hasCat=!!a.category;
+    const hasName=!!a.suggested_name;
+    return (hasCat||hasName)&&(!hasCat||catChecked)&&(!hasName||namesChecked);
+  }).map(a=>a.id));
+  await validate();review();
+ }
+ $("approve-categories").onchange=selectAutomatic;
+ $("approve-filenames").onchange=selectAutomatic;
  $("select-highlighted").onclick=async()=>{document.querySelectorAll(".row-highlight").forEach(tr=>S.selected.add(tr.dataset.id));await validate();review()};
  $("repair-result").onclick=async()=>{
   if(!S.scan||!S.issues.length)return;
@@ -251,7 +262,28 @@ function startEvents(){
   S.assign=S.scan.items.map(i=>map.get(i.id)||{id:i.id,category:"",suggested_name:""});
   S.issues=[];await validate();review();toast("已校正输出结构。请继续逐项检查分类");
  };
- $("bulk-edit").onclick=async()=>{let rows=[...document.querySelectorAll(".row-highlight")];if(!rows.length)return toast("请先点击高亮行");let cat=prompt("新分类（可用 一级/二级；留空不移动）");if(cat===null)return;for(let r of rows){let a=S.assign.find(x=>x.id===r.dataset.id);if(a)a.category=cat.trim()}await validate();review()};
+  $("bulk-edit").onclick=()=>{
+  const ids=[...document.querySelectorAll(".row-highlight")].map(row=>row.dataset.id);
+  if(!ids.length){toast("请先在审核表中点击高亮需要批量编辑的行");return}
+  S._bulkIds=ids;$("bulk-selected-count").textContent="共 "+ids.length+" 项";
+  $("bulk-main-category").value="";$("bulk-subcategory").value="";$("bulk-keep").checked=false;
+  modal("bulk");
+ };
+ $("close-bulk").onclick=$("cancel-bulk").onclick=()=>modal("bulk",false);
+ $("apply-bulk").onclick=async()=>{
+  const cat=$("bulk-main-category").value.trim(),sub=$("bulk-subcategory").value.trim();
+  const keep=$("bulk-keep").checked;
+  if(!keep&&!cat&&!sub){return toast("请输入要修改的主分类或子分类",true);}
+  for(const id of S._bulkIds||[]){
+    const a=S.assign.find(a=>a.id===id);if(!a)continue;
+    if(keep){a.category="";a.suggested_name="";continue;}
+    let parts=a.category.split("/");
+    if(cat)parts[0]=cat;
+    if(sub)parts[1]=sub;
+    a.category=parts.filter(Boolean).slice(0,2).join("/");
+  }
+  modal("bulk",false);await validate();review();
+ };
  $("review-subcats").onchange=e=>{$("subcategories").checked=e.target.checked;review()};
  $("close-review").onclick=()=>modal("review",false);
  $("btn-dry-preview").onclick=previewMoves;$("btn-confirm").onclick=apply;$("btn-later").onclick=saveDraft;

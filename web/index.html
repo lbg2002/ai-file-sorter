@@ -56,7 +56,7 @@
       <div class="review-toolbar">
         <label><input id="review-all" type="checkbox" checked>全选</label>
         <button id="select-highlighted">选择高亮项</button><button id="bulk-edit">编辑选中项…</button><button id="repair-result" hidden>检查并修复清单异常…</button>
-        <label title="模型建议仅经过校验后可执行"><input id="approve-categories" type="checkbox" checked>自动选择安全分类</label>
+        <label title="建议文件名需人工审核"><input id="approve-filenames" type="checkbox">自动选择建议重命名</label><label title="模型建议仅经过校验后可执行"><input id="approve-categories" type="checkbox" checked>自动选择安全分类</label>
       </div>
       <div class="review-options"><label><input id="review-subcats" type="checkbox">创建子分类文件夹</label>
         <label><input id="dry-run" type="checkbox">预演（仅预览，不移动文件）</label>
@@ -94,7 +94,15 @@
    <p class="fineprint">远程接口必须使用 HTTPS；仅向模型发送文件清单元数据。不会逐个文件请求。</p>
   </div>
   <div class="tab-content" id="settings-prompt"><label class="field">系统提示词<textarea id="cfg-prompt" rows="12"></textarea></label><button id="reset-prompt">恢复默认提示词</button></div>
-  <div class="tab-content" id="settings-rules"><label class="field">规则编辑器（每行：pdf,docx=文档）<textarea id="cfg-rules" rows="12"></textarea></label></div>
+  <div class="tab-content" id="settings-rules">
+ <p class="fineprint">从上到下匹配，命中第一条后停止。既支持简写，也支持完整版的字段 / 运算符规则：</p>
+ <pre class="rule-examples">pdf,docx=文献资料
+extension | equals | .pdf -> 文档/PDF
+filename | contains | paper -> 论文
+filename | regex | ^report_[0-9]+ -> 报告
+size | > | 10485760 -> 大文件
+path | contains | download -> 下载资料</pre>
+ <label class="field">规则编辑器<textarea id="cfg-rules" rows="12"></textarea></label></div>
   <div class="tab-content" id="settings-whitelists"><div class="field"><label>预设名称</label><div class="input-pair"><select id="list-preset"></select><button id="add-list">新建</button><button id="delete-list">删除</button></div></div><label class="field">允许使用的分类（每行一个，可写：一级/二级）<textarea id="list-categories" rows="12"></textarea></label></div>
   <div class="tab-content" id="settings-appearance"><label class="field">界面主题<select id="cfg-theme"><option value="light">跟随原版浅色风格</option><option value="dark">深色</option></select></label></div>
  </div>
@@ -105,6 +113,18 @@
   <div class="history-body"><aside id="history-list"></aside><div id="history-detail"></div></div>
   <footer class="dialog-footer"><button id="history-refresh">刷新记录</button><button id="history-undo">撤销所选记录</button><button id="history-close">关闭</button></footer>
  </section></div>
+<div class="overlay" id="bulk-overlay" hidden>
+ <section class="dialog bulk-dialog" role="dialog" aria-modal="true">
+  <header class="dialog-title"><strong>批量编辑已高亮的项目</strong><button id="close-bulk" title="关闭">×</button></header>
+  <div class="bulk-fields">
+   <label>目标主分类 <input id="bulk-main-category" placeholder="不填写则保持现有分类"></label>
+   <label>子分类 <input id="bulk-subcategory" placeholder="不填写则保持现有子分类"></label>
+   <label><input id="bulk-keep" type="checkbox">本批项目全部保留原位（清空分类和建议文件名）</label>
+   <p>此操作只修改预览方案；执行前仍进行完整安全校验。</p>
+  </div>
+  <footer class="dialog-footer"><span id="bulk-selected-count"></span><button id="cancel-bulk">取消</button><button id="apply-bulk" class="main-action">应用到选中项</button></footer>
+ </section>
+</div>
 <div class="overlay" id="peek-overlay" hidden>
  <section class="dialog peek-dialog" role="dialog" aria-modal="true" aria-labelledby="peek-title">
   <header class="dialog-title"><strong id="peek-title">文件预览</strong><button id="close-peek" title="关闭">×</button></header>
