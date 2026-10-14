@@ -1,14 +1,56 @@
-# FileSort Guard
+<div align="center">
 
-A safety-focused community fork of [hyperfield/ai-file-sorter](https://github.com/hyperfield/ai-file-sorter).
+# 🗂️ FileSort Guard
 
-FileSort Guard keeps the upstream AI categorization, document/image analysis, local and remote LLM support, review workflow, undo history, and cross-platform Qt application, while adding two deliberately simple workflows:
+### AI 文件整理 + 可视化规则分类 + 操作前安全审查
 
-- **Editable AI prompts** — view, edit, preview, enable/disable, and restore the categorization system prompt.
-- **Rule mode** — organize files deterministically without calling an LLM.
-- **Safety validation before apply** — compare the final categorization plan with the scanned filesystem snapshot and highlight anomalies before any move is allowed.
+*An AI-powered and rule-based file organizer with safety-first move validation.*
 
-> This repository is an independent modified fork. It is not an official build of AI File Sorter and is not affiliated with or endorsed by the upstream project.
+[![Build](https://img.shields.io/badge/Linux%20Build-GitHub%20Actions-658cce)](https://github.com/lbg2002/ai-file-sorter/actions)
+![Technology](https://img.shields.io/badge/C%2B%2B20-Qt6-4d8ca4)
+![Modes](https://img.shields.io/badge/Modes-AI%20%7C%20Rules-9978c1)
+![Safety](https://img.shields.io/badge/Review-Before%20Moving-55a189)
+![License](https://img.shields.io/badge/License-AGPL--3.0-7e8d9c)
+
+**[⬇ 下载 Linux 预览构建](https://github.com/lbg2002/ai-file-sorter/actions/runs/38014638941)** · [🧭 快速了解](#-它能做什么) · [🛡️ 安全机制](#3-safety-validation-and-visual-anomaly-preview) · [🔧 从源码构建](#build-from-source)
+
+</div>
+
+> **社区 Fork，非上游官方安装包。** 本仓库基于 [hyperfield/ai-file-sorter](https://github.com/hyperfield/ai-file-sorter) 二次开发，专注文件移动前的可检查性与安全性。**本仓库目前没有正式的 GitHub Release 安装包**，公开可下载的 Linux 构建在 GitHub Actions → Artifacts，通常需要登录 GitHub，且构建产物可能过期。其他系统请按源码说明自行构建并测试。
+
+## ✨ 它能做什么？
+
+| 🤖 AI 智能分类 | 📐 无模型规则分类 | 🛡️ 移动前审查 |
+| :--- | :--- | :--- |
+| 使用上游 AI / 本地 LLM 分类能力；系统提示词可自行编辑与预览 | 根据文件扩展名、文件名、路径、大小执行确定性规则，无需 LLM | 对照真实扫描结果，检测重复源、遗漏文件、未知源和目标冲突 |
+| **适合多类型杂乱文件** | **适合严格可控的资料归档** | **适合重要文档的安全整理** |
+
+**典型场景：** 下载文件夹、论文资料、图片素材、代码项目归档。程序会先给出分类方案与异常提示，**实际移动文件前必须经过检查和确认**；不匹配规则的文件留在原位。
+
+## 📦 预览构建下载
+
+**[→ GitHub Actions · Build（Linux 构建产物）](https://github.com/lbg2002/ai-file-sorter/actions/runs/38014638941)**
+
+| Linux 发行版 | Artifact 名称 |
+| :--- | :--- |
+| Ubuntu LTS | `aifilesorter-linux-ubuntu-lts` |
+| Debian Stable | `aifilesorter-linux-debian-stable` |
+| Fedora | `aifilesorter-linux-fedora-latest` |
+| Rocky Linux | `aifilesorter-linux-rocky-latest` |
+| Arch Linux | `aifilesorter-linux-arch-latest` |
+
+打开运行页面底部的 **Artifacts** 下载对应压缩包；解压后按包内文件类型及本机系统依赖安装或运行。构建包包含上游图形应用及相关依赖，**与轻量纯 Rust 小工具不同，包体积可能较大**。请先在备份或测试目录体验，不要直接对唯一原始资料执行批量移动。
+
+### 🧭 推荐操作流程
+
+```text
+选择文件夹 → 选择 AI / 规则模式 → 生成分类方案
+                ↓
+        与真实文件清单交叉校验
+                ↓
+      查看异常 → 人工确认 → 移动
+                              ↳ 已有 Undo 支持
+```
 
 ## Why this fork
 
