@@ -9,7 +9,7 @@ const RULES:&str="pdf=论文文献\ndoc,docx,odt=文档\nxls,xlsx,csv=表格\npp
 #[derive(Clone,Serialize,Deserialize)]
 #[serde(rename_all="camelCase")]
 struct Settings{endpoint:String,model:String,prompt:String,rules:String,include_folders:bool,theme:String}
-impl Default for Settings{fn default()->Self{Self{endpoint:"https://api.openai.com/v1".into(),model:"gpt-4.1-mini".into(),prompt:PROMPT.into(),rules:RULES.into(),include_folders:false,theme:"dark".into()}}}
+impl Default for Settings{fn default()->Self{Self{endpoint:"https://api.openai.com/v1".into(),model:"gpt-4.1-mini".into(),prompt:PROMPT.into(),rules:RULES.into(),include_folders:false,theme:"light".into()}}}
 #[derive(Clone,Serialize,Deserialize)]
 #[serde(rename_all="camelCase")]
 struct Item{id:String,name:String,kind:String,size:u64,mtime_ns:String}
@@ -441,6 +441,50 @@ mod tests{
   assert!(apply(&path,&current.items,&assignments).is_err());
   assert_eq!(fs::read(base.join("论文/paper.pdf")).unwrap(),b"do not overwrite");
   fs::remove_dir_all(base).unwrap();
+ }
+ #[test]fn nested_category_and_rename_roundtrip(){
+  let unique=SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+  let base=std::env::temp_dir().join(format!("filesort-nested-{}-{unique}",std::process::id()));
+  fs::create_dir(&base).unwrap();
+  fs::write(base.join("original.md"),b"research note").unwrap();
+  let folder=base.to_string_lossy().to_string();
+  let snapshot=scan(&folder,false,true).unwrap();
+  let assign=vec![Assignment{id:snapshot.items[0].id.clone(),
+    category:"研究/记录".into(),suggested_name:"实验记录.md".into()}];
+  assert_eq!(preview(&folder,&snapshot.items,&assign).unwrap().movable,1);
+  let job=apply(&folder,&snapshot.items,&assign).unwrap();
+  assert!(base.join("研究/记录/实验记录.md").exists());
+  let undone=undo(&job).unwrap();
+  assert!(undone.errors.is_empty());
+  assert_eq!(undone.restored,1);
+  assert_eq!(fs::read(base.join("original.md")).unwrap(),b"research note");
+  fs::remove_dir_all(&base).unwrap();
+ }
+ #[test]fn filename_only_rename_and_files_filter(){
+  let unique=SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+  let base=std::env::temp_dir().join(format!("filesort-filter-{}-{unique}",std::process::id()));
+  fs::create_dir(&base).unwrap();
+  fs::create_dir(base.join("existing")).unwrap();
+  fs::write(base.join("old.txt"),b"foo").unwrap();
+  let folder=base.to_string_lossy().to_string();
+  let folders=scan(&folder,true,false).unwrap();
+  assert_eq!(folders.items.len(),1);
+  assert_eq!(folders.items[0].kind,"folder");
+  let files=scan(&folder,false,true).unwrap();
+  assert_eq!(files.items.len(),1);
+  let assign=vec![Assignment{id:files.items[0].id.clone(),
+    category:String::new(),suggested_name:"new.txt".into()}];
+  let job=apply(&folder,&files.items,&assign).unwrap();
+  assert!(base.join("new.txt").exists());
+  let result=undo(&job).unwrap();assert_eq!(result.restored,1);
+  assert!(base.join("old.txt").exists());
+  fs::remove_dir_all(&base).unwrap();
+ }
+ #[test]fn rejects_unsafe_nested_category(){
+  for category in ["目录/../越界","目录//空","目录/子目录/三级","目录/C:","目录/CON"] {
+    assert!(!target_ok(category),"{category} unexpectedly accepted");
+  }
+  assert!(target_ok("科研/论文"));
  }
  #[test]fn detects_model_hallucinations(){
   let items=vec![Item{id:"1".into(),name:"test.pdf".into(),kind:"file".into(),size:1,mtime_ns:"0".into()}];
