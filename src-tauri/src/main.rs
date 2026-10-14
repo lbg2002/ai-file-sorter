@@ -9,11 +9,11 @@ const RULES:&str="pdf=论文文献\ndoc,docx,odt=文档\nxls,xlsx,csv=表格\npp
 
 #[derive(Clone,Serialize,Deserialize)]
 #[serde(rename_all="camelCase")]
-struct Settings{endpoint:String,model:String,prompt:String,rules:String,include_folders:bool,theme:String}
-impl Default for Settings{fn default()->Self{Self{endpoint:"https://api.openai.com/v1".into(),model:"gpt-4.1-mini".into(),prompt:PROMPT.into(),rules:RULES.into(),include_folders:false,theme:"light".into()}}}
+struct Settings{endpoint:String,model:String,prompt:String,rules:String,include_folders:bool,#[serde(default)]recursive:bool,theme:String}
+impl Default for Settings{fn default()->Self{Self{endpoint:"https://api.openai.com/v1".into(),model:"gpt-4.1-mini".into(),prompt:PROMPT.into(),rules:RULES.into(),include_folders:false,recursive:false,theme:"light".into()}}}
 #[derive(Clone,Serialize,Deserialize)]
 #[serde(rename_all="camelCase")]
-struct Item{id:String,name:String,kind:String,size:u64,mtime_ns:String}
+struct Item{id:String,name:String,kind:String,size:u64,mtime_ns:String,#[serde(default)]source_rel:String}
 #[derive(Clone,Serialize)]
 #[serde(rename_all="camelCase")]
 struct Scan{root:String,items:Vec<Item>,existing_folders:Vec<String>,ignored:Vec<String>}
@@ -26,7 +26,7 @@ struct PreviewRow{id:String,status:String,category:String,suggested_name:String}
 #[derive(Serialize)]
 struct Preview{rows:Vec<PreviewRow>,issues:Vec<String>,movable:usize,kept:usize,categories:usize}
 #[derive(Clone,Serialize,Deserialize)]
-struct Operation{name:String,category:String,kind:String,size:u64,mtime_ns:String,state:String,#[serde(default)] new_name:String}
+struct Operation{name:String,category:String,kind:String,size:u64,mtime_ns:String,state:String,#[serde(default)] new_name:String,#[serde(default)]source_rel:String}
 #[derive(Clone,Serialize,Deserialize)]
 struct Journal{id:String,root:String,created:String,status:String,operations:Vec<Operation>,created_dirs:Vec<String>,error:String}
 #[derive(Serialize)]
@@ -64,26 +64,72 @@ fn directory_is_safe(root:&Path,category:&str)->bool {
  true
 }
 fn root(s:&str)->Res<PathBuf>{let p=fs::canonicalize(s).map_err(|e|format!("无法打开目录：{e}"))?;if !p.is_dir(){return Err("请选择文件夹".into());}Ok(p)}
-fn scan(s:&str,include_folders:bool,include_files:bool)->Res<Scan>{
- let dir=root(s)?;let mut entries=fs::read_dir(&dir).map_err(|e|e.to_string())?.filter_map(Result::ok).collect::<Vec<_>>();
- entries.sort_by_key(|x|x.file_name().to_string_lossy().to_lowercase());
- let(mut items,mut existing_folders,mut ignored)=(vec![],vec![],vec![]);
- for e in entries{
-   let name=e.file_name().to_string_lossy().to_string();
-   if name.starts_with('.')||!name_ok(&name){ignored.push(name);continue;}
-   let m=match fs::symlink_metadata(e.path()){Ok(v)=>v,Err(_)=>{ignored.push(name);continue;}};
-   if m.file_type().is_symlink(){ignored.push(name);continue;}
-   if m.is_dir()&&category_ok(&name){existing_folders.push(name.clone());}
-   if !((include_files&&m.is_file())||(include_folders&&m.is_dir())){continue;}
-   if items.len()>=600{return Err("当前目录超过 600 项；已取消，未截断清单。".into());}
-   items.push(Item{id:(items.len()+1).to_string(),name,kind:if m.is_dir(){"folder"}else{"file"}.into(),size:m.len(),mtime_ns:mtime(&m)});
+fn scan_walk(base:&Path, rel:&Path, recursive:bool, include_files:bool,
+             include_folders:bool, depth:u8, items:&mut Vec<Item>,
+             folders:&mut Vec<String>, ignored:&mut Vec<String>)->Res<()> {
+ if depth>8{return Err("目录嵌套超过 8 层，请缩小整理范围".into());}
+ let dir=base.join(rel);
+ let mut entries=fs::read_dir(&dir).map_err(|e|format!("不能读取目录 {}：{e}",dir.display()))?
+     .collect::<std::io::Result<Vec<_>>>().map_err(|e|e.to_string())?;
+ entries.sort_by_key(|e|e.file_name().to_string_lossy().to_lowercase());
+ for entry in entries{
+  let name=entry.file_name().to_string_lossy().to_string();
+  let path=rel.join(&name);
+  if name.starts_with('.')||!name_ok(&name){ignored.push(path.display().to_string());continue;}
+  let m=match fs::symlink_metadata(entry.path()){Ok(m)=>m,Err(_)=>{ignored.push(path.display().to_string());continue;}};
+  if m.file_type().is_symlink(){ignored.push(path.display().to_string());continue;}
+  if depth==0 && m.is_dir() && category_ok(&name){folders.push(name.clone());}
+  if recursive && m.is_dir(){
+    scan_walk(base,&path,recursive,include_files,include_folders,depth+1,items,folders,ignored)?;
+    continue;
+  }
+  if !((include_files&&m.is_file())||(include_folders&&depth==0&&m.is_dir())){continue;}
+  if items.len()>=600{return Err("最多一次处理 600 个项目，不会静默截断".into());}
+  let relative=path.iter().map(|s|s.to_string_lossy().into_owned()).collect::<Vec<_>>().join("/");
+  items.push(Item{
+    id:(items.len()+1).to_string(),name,
+    kind:if m.is_dir(){"folder"}else{"file"}.into(),size:m.len(),
+    mtime_ns:mtime(&m),source_rel:relative
+  });
  }
- Ok(Scan{root:dir.to_string_lossy().to_string(),items,existing_folders,ignored})
+ Ok(())
 }
-fn check_source(dir:&Path,item:&Item)->Res<()>{
- if !name_ok(&item.name){return Err("源路径非法".into());}
- let m=fs::symlink_metadata(dir.join(&item.name)).map_err(|_|format!("源文件不存在：{}",item.name))?;
- if m.file_type().is_symlink()||!(if item.kind=="folder"{m.is_dir()}else{m.is_file()})||m.len()!=item.size||mtime(&m)!=item.mtime_ns{return Err(format!("源文件已变化：{}",item.name));}Ok(())
+fn scan(s:&str,include_folders:bool,include_files:bool,recursive:bool)->Res<Scan>{
+ if include_folders&&recursive{return Err("不能同时勾选“移动整个文件夹”与“递归处理内部文件”".into());}
+ if recursive&&!include_files{return Err("递归处理需启用“分类文件”".into());}
+ let dir=root(s)?;
+ let(mut items,mut folders,mut ignored)=(vec![],vec![],vec![]);
+ scan_walk(&dir,Path::new(""),recursive,include_files,include_folders,0,&mut items,&mut folders,&mut ignored)?;
+ Ok(Scan{root:dir.to_string_lossy().to_string(),items,existing_folders:folders,ignored})
+}
+fn secure_rel_path(base:&Path,relative:&str)->Res<PathBuf>{
+ if relative.is_empty(){return Err("空源路径".into());}
+ let mut out=base.to_path_buf();
+ for component in relative.split('/'){
+   if !name_ok(component){return Err(format!("相对路径非法：{relative}"));}
+   out=out.join(component);
+   let meta=fs::symlink_metadata(&out).map_err(|_|format!("源文件不存在或已变化：{relative}"))?;
+   if meta.file_type().is_symlink(){return Err(format!("禁止符号链接：{relative}"));}
+ }
+ Ok(out)
+}
+fn source_path(base:&Path,item:&Item)->Res<PathBuf>{
+ let relative=if item.source_rel.is_empty(){&item.name}else{&item.source_rel};
+ let path=secure_rel_path(base,relative)?;
+ if path.file_name().and_then(|x|x.to_str())!=Some(item.name.as_str()){
+  return Err("源文件名与相对路径不匹配".into());
+ }
+ Ok(path)
+}
+fn check_source(base:&Path,item:&Item)->Res<()> {
+ let path=source_path(base,item)?;
+ let m=fs::symlink_metadata(&path).map_err(|_|format!("源文件已不存在：{}",item.name))?;
+ if m.file_type().is_symlink()||
+   !(if item.kind=="folder"{m.is_dir()}else{m.is_file()})||
+   m.len()!=item.size||mtime(&m)!=item.mtime_ns{
+    return Err(format!("源文件已变化：{}",item.name));
+ }
+ Ok(())
 }
 fn preview(s:&str,items:&[Item],assign:&[Assignment])->Res<Preview>{
  let dir=root(s)?;
@@ -125,7 +171,8 @@ fn preview(s:&str,items:&[Item],assign:&[Assignment])->Res<Preview>{
    }else if !directory_is_safe(&dir,cat){
       issues.push(format!("分类目录不可用：{}",cat));"目录冲突"
    }else{
-      let target=if cat.is_empty(){dir.join(target_name)}else{dir.join(cat).join(target_name)};
+      let original=source_path(&dir,item)?;
+       let target=if cat.is_empty(){original.parent().ok_or("缺少源目录")?.join(target_name)}else{dir.join(cat).join(target_name)};
       let key=target.to_string_lossy().to_lowercase();
       if !targets.insert(key)||fs::symlink_metadata(&target).is_ok(){
         issues.push(format!("目标已存在：{}",target.display()));"目标冲突"
@@ -181,7 +228,7 @@ fn apply(s:&str,items:&[Item],assign:&[Assignment])->Res<String>{
    if a.category.is_empty()&&new_name==i.name{return None;}
    Some(Operation{name:i.name.clone(),category:a.category.clone(),
      kind:i.kind.clone(),size:i.size,mtime_ns:i.mtime_ns.clone(),
-     state:"planned".into(),new_name:new_name.into()})
+     state:"planned".into(),new_name:new_name.into(),source_rel:if i.source_rel.is_empty(){i.name.clone()}else{i.source_rel.clone()}})
  }).collect();
  let mut j=Journal{
     id:id.clone(),root:dir.to_string_lossy().to_string(),
@@ -193,10 +240,10 @@ fn apply(s:&str,items:&[Item],assign:&[Assignment])->Res<String>{
    for n in 0..j.operations.len(){
      let op=j.operations[n].clone();
      let item=Item{id:String::new(),name:op.name.clone(),kind:op.kind.clone(),
-        size:op.size,mtime_ns:op.mtime_ns.clone()};
+        size:op.size,mtime_ns:op.mtime_ns.clone(),source_rel:op.source_rel.clone()};
      check_source(&dir,&item)?;
      if !target_ok(&op.category)||!name_ok(&op.new_name){return Err("目标路径非法".into());}
-     let mut targetdir=dir.clone();
+     let mut targetdir=if op.category.is_empty(){source_path(&dir,&item)?.parent().ok_or("无源目录")?.to_path_buf()}else{dir.clone()};
      for seg in op.category.split('/').filter(|x|!x.is_empty()){
        targetdir=targetdir.join(seg);
        match fs::symlink_metadata(&targetdir){
@@ -211,7 +258,7 @@ fn apply(s:&str,items:&[Item],assign:&[Assignment])->Res<String>{
      }
      let destination=targetdir.join(&op.new_name);
      j.operations[n].state="moving".into();journal_save(&j)?;
-     move_safe(&dir.join(&op.name),&destination)
+     move_safe(&source_path(&dir,&item)?,&destination)
         .map_err(|e|format!("移动/重命名 {} 失败：{e}",op.name))?;
      j.operations[n].state="done".into();journal_save(&j)?;
    }
@@ -233,8 +280,12 @@ fn undo(id:&str)->Res<UndoResult>{
    if !target_ok(&op.category)||!name_ok(&op.name)||(!op.new_name.is_empty()&&!name_ok(&op.new_name)){
     errors.push(format!("日志目标路径不安全：{}",op.name));continue;
    }
-   let src=dir.join(&op.name);
-   let targetdir=dir.join(&op.category);
+   let rel=if op.source_rel.is_empty(){op.name.as_str()}else{op.source_rel.as_str()};
+   let mut src=dir.clone();
+   let mut valid=true;
+   for c in rel.split('/') {if !name_ok(c){valid=false;break;}src=src.join(c);}
+   if !valid{errors.push(format!("源路径无效：{rel}"));continue;}
+   let targetdir=if op.category.is_empty(){src.parent().unwrap_or(&dir).to_path_buf()}else{dir.join(&op.category)};
    let dst=targetdir.join(dest_name(&op.name,&op.new_name));
    if (op.state=="moving"||op.state=="restoring")&&fs::symlink_metadata(&src).is_ok()&&fs::symlink_metadata(&dst).is_err(){
        let x=fs::symlink_metadata(&src).map_err(|e|e.to_string())?;
@@ -293,7 +344,7 @@ fn save_settings(settings:Settings)->Res<()>{
 #[tauri::command]
 fn pick_folder()->Option<String>{rfd::FileDialog::new().pick_folder().map(|p|p.to_string_lossy().to_string())}
 #[tauri::command]
-fn scan_folder(folder:String,include_folders:bool,include_files:bool)->Res<Scan>{scan(&folder,include_folders,include_files)}
+fn scan_folder(folder:String,include_folders:bool,include_files:bool,include_recursive:bool)->Res<Scan>{scan(&folder,include_folders,include_files,include_recursive)}
 #[tauri::command]
 fn preview_plan(folder:String,items:Vec<Item>,assignments:Vec<Assignment>)->Res<Preview>{preview(&folder,&items,&assignments)}
 #[derive(Debug)]
@@ -378,17 +429,17 @@ fn rule_plan(scan:&Scan,rules:&str)->Res<Vec<Assignment>>{
  }).collect())
 }
 #[tauri::command]
-fn plan_by_rules(folder:String,include_folders:bool,include_files:bool,rules:String)->Res<Analysis>{
- let scan=scan(&folder,include_folders,include_files)?;
+fn plan_by_rules(folder:String,include_folders:bool,include_files:bool,include_recursive:bool,rules:String)->Res<Analysis>{
+ let scan=scan(&folder,include_folders,include_files,include_recursive)?;
  let assignments=rule_plan(&scan,&rules)?;
  Ok(Analysis{scan,assignments,issues:vec![]})
 }
 #[tauri::command]
-async fn analyze_folder(folder:String,include_folders:bool,include_files:bool,endpoint:String,model:String,api_key:String,prompt:String)->Res<Analysis>{
+async fn analyze_folder(folder:String,include_folders:bool,include_files:bool,include_recursive:bool,endpoint:String,model:String,api_key:String,prompt:String)->Res<Analysis>{
  if model.trim().is_empty(){return Err("模型名不能为空".into());}
  let scan=scan(&folder,include_folders,include_files)?;
  if scan.items.is_empty(){return Err("目录中没有可整理项目".into());}
- let manifest=json!({"existing_folders":scan.existing_folders,"items":scan.items.iter().map(|i|json!({"id":i.id,"name":i.name,"type":i.kind,"bytes":i.size})).collect::<Vec<_>>()});
+ let manifest=json!({"existing_folders":scan.existing_folders,"items":scan.items.iter().map(|i|json!({"id":i.id,"name":i.name,"relative_path":i.source_rel,"type":i.kind,"bytes":i.size})).collect::<Vec<_>>()});
  let m=serde_json::to_string(&manifest).map_err(|e|e.to_string())?;
  if m.chars().count()>60000{return Err("文件清单超过 60000 字符，已停止请求".into());}
  let sys=if prompt.trim().is_empty(){PROMPT}else{prompt.trim()};
@@ -532,12 +583,31 @@ mod tests{
   let rules="extension | equals | .pdf -> 文献/PDF\nfilename | contains | meeting -> 会议\nsize | > | 100 -> 大文件\nfilename | regex | ^paper_ -> 论文";
   let parsed=parse_file_rules(rules).unwrap();
   assert_eq!(parsed.len(),4);
-  let i=Item{id:"1".into(),name:"paper_a.pdf".into(),kind:"file".into(),size:512,mtime_ns:"0".into()};
+  let i=Item{id:"1".into(),name:"paper_a.pdf".into(),kind:"file".into(),size:512,mtime_ns:"0".into(),source_rel:String::new()};
   assert!(rule_matches(&parsed[0],&i,"/tmp"));
   assert!(rule_matches(&parsed[2],&i,"/tmp"));
   assert!(rule_matches(&parsed[3],&i,"/tmp"));
   assert!(!rule_matches(&parsed[1],&i,"/tmp"));
   assert!(parse_file_rules("filename | regex | ( -> 论文").is_err());
+ }
+ #[test]fn recursive_scan_keeps_parent_and_restores_nested_file(){
+  let unique=SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+  let base=std::env::temp_dir().join(format!("filesort-rec-{}-{unique}",std::process::id()));
+  fs::create_dir_all(base.join("nested")).unwrap();
+  fs::write(base.join("nested/file.md"),b"note").unwrap();
+  let folder=base.to_string_lossy().to_string();
+  assert!(scan(&folder,true,true,true).is_err());
+  let snapshot=scan(&folder,false,true,true).unwrap();
+  assert_eq!(snapshot.items.len(),1);
+  assert_eq!(snapshot.items[0].source_rel,"nested/file.md");
+  let assign=vec![Assignment{id:snapshot.items[0].id.clone(),category:"资料".into(),suggested_name:String::new()}];
+  let id=apply(&folder,&snapshot.items,&assign).unwrap();
+  assert!(base.join("资料/file.md").exists());
+  assert!(base.join("nested").exists());
+  let undone=undo(&id).unwrap();
+  assert_eq!(undone.restored,1);
+  assert!(base.join("nested/file.md").exists());
+  fs::remove_dir_all(base).unwrap();
  }
  #[test]fn invalid_names(){for s in ["../x","a/b","CON","LPT1","name.",".",""]{assert!(!category_ok(s));}assert!(category_ok("论文资料"));}
  #[test]fn requires_https(){assert!(api_url("http://example.com/v1",false).is_err());assert!(api_url("https://example.com/v1",false).is_ok());}
@@ -547,7 +617,7 @@ mod tests{
   fs::create_dir(&base).unwrap();
   fs::write(base.join("paper.pdf"),b"temporary file").unwrap();
   let path=base.to_string_lossy().to_string();
-  let current=scan(&path,false,true).unwrap();
+  let current=scan(&path,false,true,false).unwrap();
   let assignments=vec![Assignment{id:current.items[0].id.clone(),category:"论文".into(),suggested_name:String::new()}];
   assert_eq!(preview(&path,&current.items,&assignments).unwrap().movable,1);
   let journal_id=apply(&path,&current.items,&assignments).unwrap();
@@ -566,7 +636,7 @@ mod tests{
   fs::create_dir(base.join("论文")).unwrap();
   fs::write(base.join("论文/paper.pdf"),b"do not overwrite").unwrap();
   let path=base.to_string_lossy().to_string();
-  let current=scan(&path,false,true).unwrap();
+  let current=scan(&path,false,true,false).unwrap();
   let assignments=vec![Assignment{id:current.items[0].id.clone(),category:"论文".into(),suggested_name:String::new()}];
   assert!(!preview(&path,&current.items,&assignments).unwrap().issues.is_empty());
   assert!(apply(&path,&current.items,&assignments).is_err());
@@ -579,7 +649,7 @@ mod tests{
   fs::create_dir(&base).unwrap();
   fs::write(base.join("original.md"),b"research note").unwrap();
   let folder=base.to_string_lossy().to_string();
-  let snapshot=scan(&folder,false,true).unwrap();
+  let snapshot=scan(&folder,false,true,false).unwrap();
   let assign=vec![Assignment{id:snapshot.items[0].id.clone(),
     category:"研究/记录".into(),suggested_name:"实验记录.md".into()}];
   assert_eq!(preview(&folder,&snapshot.items,&assign).unwrap().movable,1);
@@ -598,10 +668,10 @@ mod tests{
   fs::create_dir(base.join("existing")).unwrap();
   fs::write(base.join("old.txt"),b"foo").unwrap();
   let folder=base.to_string_lossy().to_string();
-  let folders=scan(&folder,true,false).unwrap();
+  let folders=scan(&folder,true,false,false).unwrap();
   assert_eq!(folders.items.len(),1);
   assert_eq!(folders.items[0].kind,"folder");
-  let files=scan(&folder,false,true).unwrap();
+  let files=scan(&folder,false,true,false).unwrap();
   assert_eq!(files.items.len(),1);
   let assign=vec![Assignment{id:files.items[0].id.clone(),
     category:String::new(),suggested_name:"new.txt".into()}];
@@ -618,7 +688,7 @@ mod tests{
   assert!(target_ok("科研/论文"));
  }
  #[test]fn detects_model_hallucinations(){
-  let items=vec![Item{id:"1".into(),name:"test.pdf".into(),kind:"file".into(),size:1,mtime_ns:"0".into()}];
+  let items=vec![Item{id:"1".into(),name:"test.pdf".into(),kind:"file".into(),size:1,mtime_ns:"0".into(),source_rel:String::new()}];
   let (_,issues)=parse_moves(r#"{"moves":[{"id":"1","category":"论文"},{"id":"2","category":"其他"},{"id":"1","category":"重复"}]}"#,&items).unwrap();
   assert_eq!(issues.len(),2);
  }
