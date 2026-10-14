@@ -114,6 +114,7 @@ function review(open=false){
  $("review-alerts").hidden=!issues().length;$("review-alerts").textContent=issues().slice(0,15).join("；");
  $("btn-confirm").disabled=!!issues().length||!S.preview?.movable;
  $("btn-dry-preview").disabled=!!issues().length||!S.preview?.movable;
+ $("repair-result").hidden=S.issues.length===0;
  $("review-rows").innerHTML=S.scan.items.map(i=>{
    let a=assign.get(i.id)||{category:"",suggested_name:""},r=rows.get(i.id);
    let [cat="",sub=""]=a.category.split("/"),to=pathJoin(cat?pathJoin(S.scan.root,a.category):S.scan.root,a.suggested_name||i.name);
@@ -228,6 +229,13 @@ function startEvents(){
  $("review-all").onchange=async e=>{S.selected=new Set(e.target.checked?S.scan.items.map(i=>i.id):[]);await validate();review()};
  $("approve-categories").onchange=async e=>{S.selected=new Set(e.target.checked?S.scan.items.map(i=>i.id):[]);await validate();review()};
  $("select-highlighted").onclick=async()=>{document.querySelectorAll(".row-highlight").forEach(tr=>S.selected.add(tr.dataset.id));await validate();review()};
+ $("repair-result").onclick=async()=>{
+  if(!S.scan||!S.issues.length)return;
+  if(!confirm("模型返回了遗漏、重复或虚构项目。\n将删除非法记录，对遗漏项显式标记“保留原位”，然后重新进行完整性检查。\n继续前请人工审查所有行。"))return;
+  const map=new Map(S.assign.map(a=>[a.id,a]));
+  S.assign=S.scan.items.map(i=>map.get(i.id)||{id:i.id,category:"",suggested_name:""});
+  S.issues=[];await validate();review();toast("已校正输出结构。请继续逐项检查分类");
+ };
  $("bulk-edit").onclick=async()=>{let rows=[...document.querySelectorAll(".row-highlight")];if(!rows.length)return toast("请先点击高亮行");let cat=prompt("新分类（可用 一级/二级；留空不移动）");if(cat===null)return;for(let r of rows){let a=S.assign.find(x=>x.id===r.dataset.id);if(a)a.category=cat.trim()}await validate();review()};
  $("review-subcats").onchange=e=>{$("subcategories").checked=e.target.checked;review()};
  $("close-review").onclick=()=>modal("review",false);
