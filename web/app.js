@@ -362,7 +362,7 @@ function startEvents(){
 async function init(){
  startEvents();
  try{
-  let [s,home]=await Promise.all([inv("load_settings"),inv("home_directory")]);
+  let [s,home,locations]=await Promise.all([inv("load_settings"),inv("home_directory"),inv("favorite_locations")]);
   const savedExplorerWidth=localStorage.getItem("filesort.explorer.width");
   if(savedExplorerWidth&&/^\d+(?:\.\d+)?px$/.test(savedExplorerWidth))$("explorer").style.width=savedExplorerWidth;
   S.home=home;S.settings=s;S.defaultPrompt=s.prompt;S.lists=JSON.parse(localStorage.getItem("filesort.whitelist")||"null")||{默认:["论文文献","文档","图片","表格"]};
@@ -370,7 +370,7 @@ async function init(){
   document.body.dataset.theme=s.theme==="dark"?"dark":"light";
   $("include-folders").checked=!!s.includeFolders;$("recursive").checked=!!s.recursive;
   listOptions();modeChange();
-  $("quick-locations").innerHTML=[["⌂","用户主目录",home],["▰","下载",pathJoin(home,"Downloads")],["▰","桌面",pathJoin(home,"Desktop")],["▰","文档",pathJoin(home,"Documents")]].map(([ic,lab,path])=>'<button class="quick-item" data-path="'+html(path)+'"><span>'+ic+'</span> '+lab+'</button>').join("");
+  $("quick-locations").innerHTML=locations.map(loc=>'<button class="quick-item" data-path="'+html(loc.path)+'" title="'+html(loc.path)+'"><span>'+html(loc.icon)+'</span> '+html(loc.label)+'</button>').join("");
   S.tree=[{path:home,open:false,children:[]}];
   S.draft=JSON.parse(localStorage.getItem("filesort.draft")||"null");
   await navigate(home);
