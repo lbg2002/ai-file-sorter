@@ -27,6 +27,21 @@ function resultRows(){
  let map=new Map(S.assign.map(a=>[a.id,a]));
  $("folder-entries").innerHTML=S.scan.items.map(i=>{let a=map.get(i.id),p=(a?.category||"").split("/"),r=S.preview?.rows.find(r=>r.id===i.id);return '<tr data-result="'+html(i.id)+'"><td>'+html(i.name)+'</td><td>'+(i.kind==="folder"?"文件夹":"文件")+'</td><td>'+html(p[0]||"保持原位")+'</td><td>'+html(p[1]||"—")+'</td><td>'+html(r?.status||"未检查")+'</td></tr>'}).join("");
 }
+async function openPeek(name){
+ if(!S.path||!name)return;
+ let file;
+ try{file=await inv("file_preview",{folder:S.path,name})}
+ catch(e){toast("预览失败："+e,true);return;}
+ $("peek-title").textContent="只读预览 · "+file.name;
+ $("peek-size").textContent="大小 "+size(file.bytes)+" · 内容只在本地查看";
+ $("peek-image").hidden=file.kind!=="image";
+ $("peek-text").hidden=file.kind!=="text";
+ $("peek-meta").hidden=file.kind!=="metadata";
+ if(file.kind==="image"){$("peek-image").src=file.content}
+ if(file.kind==="text"){$("peek-text").textContent=file.content+(file.truncated?"\n\n— 仅显示前 128 KiB —":"")}
+ if(file.kind==="metadata"){$("peek-meta").textContent=file.content}
+ modal("peek");
+}
 async function browse(path,preserve=false){
  if(!path)return;
  let data=await inv("browse_directory",{folder:path});
@@ -120,7 +135,7 @@ function review(open=false){
    let [cat="",sub=""]=a.category.split("/"),to=pathJoin(cat?pathJoin(S.scan.root,a.category):S.scan.root,a.suggested_name||i.name);
    let bad=!["可移动","仅重命名","保留原位"].includes(r?.status);
    return '<tr data-id="'+html(i.id)+'" class="'+(bad?"row-error":"")+'"><td><input type="checkbox" class="review-select" '+(S.selected.has(i.id)?"checked":"")+'></td>'+
-   '<td title="'+html(i.name)+'">'+html(i.name)+'</td><td>'+(i.kind==="folder"?"▰ 文件夹":"▤ 文件")+'</td>'+
+   '<td title="'+html(i.name)+'">'+html(i.name)+'<button class="review-file-open" data-peek="'+html(i.name)+'" title="预览文件">◉</button></td><td>'+(i.kind==="folder"?"▰ 文件夹":"▤ 文件")+'</td>'+
    '<td><input type="text" class="review-name" value="'+html(a.suggested_name)+'" placeholder="'+html(i.name)+'"></td>'+
    '<td><input type="text" class="review-category" value="'+html(cat)+'" placeholder="保留原位"></td>'+
    '<td><input type="text" class="review-subcategory" value="'+html(sub)+'" '+(opts().subcategories?"":"disabled")+'></td>'+
@@ -215,7 +230,7 @@ function startEvents(){
  $("back-folder").onclick=()=>S.browser?.parent&&navigate(S.browser.parent);
  $("folder-entries").ondblclick=e=>{
   let row=e.target.closest("tr[data-path],tr[data-result]");if(row?.dataset.result){review(true);return;}
-  let item=S.browser?.entries.find(x=>x.path===row?.dataset.path);if(item?.kind==="folder")navigate(item.path);
+  let item=S.browser?.entries.find(x=>x.path===row?.dataset.path);if(item?.kind==="folder")navigate(item.path);else if(item?.kind==="file")openPeek(item.name);
  };
  $("browser-head").onclick=e=>{let th=e.target.closest("[data-sort]");if(!th)return;S.reverse=S.sort===th.dataset.sort?!S.reverse:false;S.sort=th.dataset.sort;folderRows()};
  $("switch-results").onclick=()=>{if(!S.scan){toast("未生成分类结果");return}S.view=S.view==="folder"?"results":"folder";folderRows()};
@@ -225,7 +240,7 @@ function startEvents(){
  $("use-whitelist").onchange=modeChange;
  $("analyze").onclick=analyze;
  $("review-rows").onchange=reviewChanged;
- $("review-rows").onclick=e=>{let tr=e.target.closest("tr");if(tr&&!e.target.closest("input"))tr.classList.toggle("row-highlight")};
+ $("review-rows").onclick=e=>{const button=e.target.closest("[data-peek]");if(button){openPeek(button.dataset.peek);return;}let tr=e.target.closest("tr");if(tr&&!e.target.closest("input"))tr.classList.toggle("row-highlight")};
  $("review-all").onchange=async e=>{S.selected=new Set(e.target.checked?S.scan.items.map(i=>i.id):[]);await validate();review()};
  $("approve-categories").onchange=async e=>{S.selected=new Set(e.target.checked?S.scan.items.map(i=>i.id):[]);await validate();review()};
  $("select-highlighted").onclick=async()=>{document.querySelectorAll(".row-highlight").forEach(tr=>S.selected.add(tr.dataset.id));await validate();review()};
@@ -242,6 +257,7 @@ function startEvents(){
  $("btn-dry-preview").onclick=previewMoves;$("btn-confirm").onclick=apply;$("btn-later").onclick=saveDraft;
  $("btn-review-undo").onclick=()=>history();
  $("close-preview").onclick=$("btn-preview-close").onclick=()=>modal("preview",false);
+ $("close-peek").onclick=$("peek-close").onclick=()=>{modal("peek",false);$("peek-image").removeAttribute("src");};
  $("close-settings").onclick=$("cancel-settings").onclick=()=>modal("settings",false);
  $("save-settings").onclick=async()=>{
   try{let s=settings();await inv("save_settings",{settings:s});S.settings=s;document.body.dataset.theme=s.theme;localStorage.setItem("filesort.whitelist",JSON.stringify(S.lists));modal("settings",false);toast("设置已保存")}catch(e){toast(e,true)}
