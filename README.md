@@ -36,6 +36,8 @@
 然后执行：
 
     cd src-tauri
+    cargo install tauri-cli --version '^2'
+    cargo tauri icon icons/source.svg
     cargo test
     cargo run
 
