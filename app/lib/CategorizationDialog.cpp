@@ -376,7 +376,12 @@ void CategorizationDialog::setup_ui()
     table_view->setSelectionBehavior(QAbstractItemView::SelectRows);
     table_view->setSelectionMode(QAbstractItemView::ExtendedSelection);
     table_view->setEditTriggers(QAbstractItemView::DoubleClicked | QAbstractItemView::SelectedClicked | QAbstractItemView::EditKeyPressed);
-    table_view->horizontalHeader()->setStretchLastSection(true);
+    // Keep a predictable, readable table even when filenames or destinations are very long.
+    table_view->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
+    table_view->horizontalHeader()->setStretchLastSection(false);
+    table_view->setTextElideMode(Qt::ElideMiddle);
+    table_view->setWordWrap(false);
+    table_view->horizontalHeader()->setMinimumSectionSize(26);
     table_view->verticalHeader()->setVisible(false);
     table_view->horizontalHeader()->setSectionsClickable(true);
     table_view->horizontalHeader()->setSortIndicatorShown(true);
@@ -390,6 +395,12 @@ void CategorizationDialog::setup_ui()
     table_view->setColumnWidth(ColumnSelect, 70);
     table_view->setIconSize(QSize(16, 16));
     table_view->setColumnWidth(ColumnType, table_view->iconSize().width() + 12);
+    table_view->setColumnWidth(ColumnFile, 270);
+    table_view->setColumnWidth(ColumnSuggestedName, 220);
+    table_view->setColumnWidth(ColumnCategory, 160);
+    table_view->setColumnWidth(ColumnSubcategory, 160);
+    table_view->setColumnWidth(ColumnStatus, 115);
+    table_view->setColumnWidth(ColumnPreview, 320);
 
     auto* table_panel = new QFrame(this);
     table_panel->setObjectName(QStringLiteral("aifsReviewTablePanel"));
@@ -837,6 +848,8 @@ void CategorizationDialog::populate_model()
 
         auto* file_item = new QStandardItem(QString::fromStdString(file.file_name));
         file_item->setEditable(false);
+        file_item->setToolTip(QString::fromStdString(file.file_name) + QStringLiteral("\n") +
+                              QString::fromStdString(file.file_path));
         file_item->setData(QString::fromStdString(file.file_path), kFilePathRole);
         file_item->setData(QString::fromStdString(file.file_name), kOriginalFileNameRole);
         file_item->setData(file.used_consistency_hints, kUsedConsistencyRole);
@@ -906,6 +919,13 @@ void CategorizationDialog::populate_model()
         auto* preview_item = new QStandardItem;
         preview_item->setEditable(false);
 
+        // Hover reveals the complete, unelided values without expanding the columns.
+        for (QStandardItem* cell : {suggested_item, category_item, subcategory_item}) {
+            if (cell && !cell->text().isEmpty()) {
+                cell->setToolTip(cell->text());
+            }
+        }
+
         row << select_item
             << file_item
             << type_item
@@ -921,7 +941,7 @@ void CategorizationDialog::populate_model()
     updating_select_all = false;
     apply_subcategory_visibility();
     apply_rename_visibility();
-    table_view->resizeColumnsToContents();
+    // Avoid resizeColumnsToContents(): one long filename used to make the table unusable.
     update_select_all_state();
     update_preview_button_state();
 }
