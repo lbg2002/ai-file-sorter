@@ -447,7 +447,7 @@ fn plan_by_rules(folder:String,include_folders:bool,include_files:bool,include_r
 #[tauri::command]
 async fn analyze_folder(folder:String,include_folders:bool,include_files:bool,include_recursive:bool,endpoint:String,model:String,api_key:String,prompt:String)->Res<Analysis>{
  if model.trim().is_empty(){return Err("模型名不能为空".into());}
- let scan=scan(&folder,include_folders,include_files)?;
+ let scan=scan(&folder,include_folders,include_files,include_recursive)?;
  if scan.items.is_empty(){return Err("目录中没有可整理项目".into());}
  let manifest=json!({"existing_folders":scan.existing_folders,"items":scan.items.iter().map(|i|json!({"id":i.id,"name":i.name,"relative_path":i.source_rel,"type":i.kind,"bytes":i.size})).collect::<Vec<_>>()});
  let m=serde_json::to_string(&manifest).map_err(|e|e.to_string())?;
