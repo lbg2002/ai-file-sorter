@@ -135,7 +135,7 @@ function review(open=false){
    let [cat="",sub=""]=a.category.split("/"),to=pathJoin(cat?pathJoin(S.scan.root,a.category):S.scan.root,a.suggested_name||i.name);
    let bad=!["可移动","仅重命名","保留原位"].includes(r?.status);
    return '<tr data-id="'+html(i.id)+'" class="'+(bad?"row-error":"")+'"><td><input type="checkbox" class="review-select" '+(S.selected.has(i.id)?"checked":"")+'></td>'+
-   '<td title="'+html(i.name)+'">'+html(i.name)+'<button class="review-file-open" data-peek="'+html(i.name)+'" title="预览文件">◉</button></td><td>'+(i.kind==="folder"?"▰ 文件夹":"▤ 文件")+'</td>'+
+   '<td title="'+html(i.sourceRel||i.name)+'">'+html(i.sourceRel||i.name)+'<button class="review-file-open" data-peek="'+html(i.sourceRel||i.name)+'" title="预览文件">◉</button></td><td>'+(i.kind==="folder"?"▰ 文件夹":"▤ 文件")+'</td>'+
    '<td><input type="text" class="review-name" value="'+html(a.suggested_name)+'" placeholder="'+html(i.name)+'"></td>'+
    '<td><input type="text" class="review-category" value="'+html(cat)+'" placeholder="保留原位"></td>'+
    '<td><input type="text" class="review-subcategory" value="'+html(sub)+'" '+(opts().subcategories?"":"disabled")+'></td>'+
