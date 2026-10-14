@@ -409,3 +409,10 @@ input[type=checkbox],input[type=radio]{width:15px;height:15px;vertical-align:mid
   .review-toolbar{min-height:36px;margin-bottom:4px}
   .review-options{margin-bottom:5px}
 }
+
+/* Compact file type cells and persistent, explicit review states. */
+.review-table-scroll .type-cell{white-space:nowrap;color:var(--muted);font-size:11px}
+.type-icon{display:inline-block;width:14px;height:14px;margin-right:5px;vertical-align:-2px;
+ background:center/contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238394a9' stroke-width='1.7'%3E%3Cpath d='M6 2.7h8l4 4v14.6H6a2 2 0 0 1-2-2V4.7a2 2 0 0 1 2-2Z'/%3E%3Cpath d='M14 3v5h5M8 13h7M8 17h6'/%3E%3C/svg%3E")}
+.type-icon.folder{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23d89a35' stroke-width='1.7'%3E%3Cpath d='M2.5 7a2 2 0 0 1 2-2h5l2.3 2H20a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4.5a2 2 0 0 1-2-2Z' fill='%23f8e9c7'/%3E%3C/svg%3E")}
+#review-table tbody tr[hidden]{display:none}
