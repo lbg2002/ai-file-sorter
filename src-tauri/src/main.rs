@@ -168,7 +168,8 @@ fn preview(s:&str,items:&[Item],assign:&[Assignment])->Res<Preview>{
    let cat=action.map(|a|a.category.as_str()).unwrap_or("");
    let suggested=action.map(|a|a.suggested_name.as_str()).unwrap_or("");
    let target_name=dest_name(&item.name,suggested);
-   let no_action=cat.is_empty()&&target_name==item.name;
+   let no_action=(cat.is_empty()&&target_name==item.name)||
+       (!cat.is_empty()&&source_path(&dir,item).map(|origin|origin==dir.join(cat).join(target_name)).unwrap_or(false));
    let state=if action.is_none(){
       issues.push(format!("模型遗漏：{}",item.name));"遗漏"
    }else if let Err(e)=check_source(&dir,item){
@@ -236,7 +237,10 @@ fn apply(s:&str,items:&[Item],assign:&[Assignment])->Res<String>{
  let ops=items.iter().filter_map(|i|{
    let a=map.get(i.id.as_str())?;
    let new_name=dest_name(&i.name,&a.suggested_name);
-   if a.category.is_empty()&&new_name==i.name{return None;}
+   let relative=if i.source_rel.is_empty(){i.name.as_str()}else{i.source_rel.as_str()};
+   let original=dir.join(relative);
+   let destination=if a.category.is_empty(){original.parent().unwrap_or(&dir).join(new_name)}else{dir.join(&a.category).join(new_name)};
+   if destination==original{return None;}
    Some(Operation{name:i.name.clone(),category:a.category.clone(),
      kind:i.kind.clone(),size:i.size,mtime_ns:i.mtime_ns.clone(),
      state:"planned".into(),new_name:new_name.into(),source_rel:if i.source_rel.is_empty(){i.name.clone()}else{i.source_rel.clone()}})
@@ -606,6 +610,20 @@ mod tests{
   fs::create_dir_all(base.join("safe")).unwrap();
   assert!(safe_restore_path(&base,"../escape").is_err());
   assert!(safe_restore_path(&base,"safe/note.txt").is_ok());
+  fs::remove_dir_all(base).unwrap();
+ }
+ #[test]fn recursive_existing_category_is_noop(){
+  let unique=SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+  let base=std::env::temp_dir().join(format!("filesort-noop-{}-{unique}",std::process::id()));
+  fs::create_dir_all(base.join("分类")).unwrap();
+  fs::write(base.join("分类/paper.pdf"),b"paper").unwrap();
+  let folder=base.to_string_lossy().into_owned();
+  let scan=scan(&folder,false,true,true).unwrap();
+  let assign=vec![Assignment{id:scan.items[0].id.clone(),category:"分类".into(),suggested_name:String::new()}];
+  let p=preview(&folder,&scan.items,&assign).unwrap();
+  assert!(p.issues.is_empty());assert_eq!(p.kept,1);
+  assert!(apply(&folder,&scan.items,&assign).is_err());
+  assert!(base.join("分类/paper.pdf").exists());
   fs::remove_dir_all(base).unwrap();
  }
  #[test]fn recursive_scan_keeps_parent_and_restores_nested_file(){
