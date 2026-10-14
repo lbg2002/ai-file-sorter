@@ -162,7 +162,9 @@ fn undo(id:&str)->Res<UndoResult>{
    let op=j.operations[n].clone();
    if op.state=="planned"||op.state=="undone"{continue;}
    let src=dir.join(&op.name);let targetdir=dir.join(&op.category);let dst=targetdir.join(&op.name);
-   if op.state=="moving"&&fs::symlink_metadata(&src).is_ok()&&fs::symlink_metadata(&dst).is_err(){
+   if (op.state=="moving"||op.state=="restoring")&&fs::symlink_metadata(&src).is_ok()&&fs::symlink_metadata(&dst).is_err(){
+       let x=fs::symlink_metadata(&src).map_err(|e|e.to_string())?;
+       if x.file_type().is_symlink()||x.len()!=op.size||mtime(&x)!=op.mtime_ns{errors.push(format!("源文件恢复状态不确定：{}",op.name));continue;}
        j.operations[n].state="undone".into();journal_save(&j)?;continue;
    }
    let m=match fs::symlink_metadata(&dst){Ok(m)=>m,Err(_)=>{errors.push(format!("目标不存在：{}",op.name));continue;}};
@@ -180,8 +182,10 @@ fn undo(id:&str)->Res<UndoResult>{
 }
 fn api_url(endpoint:&str,model_list:bool)->Res<String>{
  let e=endpoint.trim().trim_end_matches('/');
- if !(e.starts_with("https://")||e.starts_with("http://localhost")||e.starts_with("http://127.0.0.1")||e.starts_with("http://[::1]")){
-  return Err("远程 API 必须使用 HTTPS；本机地址允许 HTTP".into());
+ let parsed=reqwest::Url::parse(e).map_err(|_|"API URL 格式不正确")?;
+ let loopback=matches!(parsed.host_str(),Some("localhost"|"127.0.0.1"|"::1"));
+ if !((parsed.scheme()=="https"&&parsed.host_str().is_some())||(parsed.scheme()=="http"&&loopback))||!parsed.username().is_empty()||parsed.password().is_some()||parsed.query().is_some()||parsed.fragment().is_some(){
+  return Err("远程 API 必须使用 HTTPS；HTTP 仅允许 localhost/127.0.0.1/::1，不允许嵌入凭据".into());
  }
  let prefix=e.strip_suffix("/chat/completions").unwrap_or(e);
  let base=if prefix.ends_with("/v1"){prefix.to_string()}else{format!("{prefix}/v1")};
