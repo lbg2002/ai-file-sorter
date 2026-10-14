@@ -513,6 +513,33 @@ struct BrowserDirectory {
 }
 #[tauri::command]
 fn home_directory()->String{dirs::home_dir().unwrap_or_else(std::env::temp_dir).to_string_lossy().into_owned()}
+#[derive(Serialize)]
+#[serde(rename_all="camelCase")]
+struct FavoriteLocation { label:String, path:String, icon:String }
+#[tauri::command]
+fn favorite_locations()->Vec<FavoriteLocation> {
+ let mut locations=Vec::new();
+ let mut seen=HashSet::new();
+ let suggestions=[
+   ("主目录","⌂",dirs::home_dir()),
+   ("下载","↓",dirs::download_dir()),
+   ("桌面","▣",dirs::desktop_dir()),
+   ("文档","▤",dirs::document_dir()),
+ ];
+ for (label,icon,path) in suggestions {
+   if let Some(path)=path {
+     if let Ok(canonical)=fs::canonicalize(path){
+       if canonical.is_dir() && seen.insert(canonical.clone()){
+         locations.push(FavoriteLocation{
+           label:label.into(),path:canonical.to_string_lossy().into_owned(),icon:icon.into()
+         });
+       }
+     }
+   }
+ }
+ locations
+}
+
 #[tauri::command]
 fn browse_directory(folder: String) -> Res<BrowserDirectory> {
     let dir = root(&folder)?;
@@ -586,7 +613,7 @@ fn file_preview(folder:String,name:String)->Res<FilePeek>{
 
 fn main(){
  tauri::Builder::default().invoke_handler(tauri::generate_handler![
-  load_settings,save_settings,pick_folder,scan_folder,browse_directory,home_directory,file_preview,preview_plan,plan_by_rules,analyze_folder,fetch_models,apply_plan,list_history,undo_history
+  load_settings,save_settings,pick_folder,scan_folder,browse_directory,home_directory,favorite_locations,file_preview,preview_plan,plan_by_rules,analyze_folder,fetch_models,apply_plan,list_history,undo_history
  ]).run(tauri::generate_context!()).expect("FileSort Lite could not start");
 }
 #[cfg(test)]
