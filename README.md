@@ -1,60 +1,53 @@
-# FileSort Lite · Rust / Tauri 2
+# AI File Sorter Lite — Original UI Parity (Rust)
 
-**轻量 API-only 文件整理器**：一次规划整个文件夹、人工审查、严格校验、操作记录与安全撤销。Rust 文件操作核心 + Tauri 2 原生 WebView 界面，不再依赖 Python、llama.cpp、本地模型、CUDA、PDFium 或多媒体模型。
+> **开发中的忠实复刻分支，尚未达到完整版功能等价。**
 
-> 此版本是独立重写的 **测试分支**，尚未替换主分支。设计思路来源于原 [hyperfield/ai-file-sorter](https://github.com/hyperfield/ai-file-sorter)；继续遵循 AGPL-3.0 协议。建议先拿可丢弃的测试文件夹体验。
+本分支针对 [lbg2002/ai-file-sorter](https://github.com/lbg2002/ai-file-sorter) 原 Qt 桌面产品（包含 feature/modern-review-smart-folders-20261010 的交互方向）进行界面与操作流程复刻。目标：保留用户熟悉的完整桌面工作流，仅删除本地 GGUF 模型下载、llama.cpp、CUDA/Vulkan 推理及相关重型依赖。Rust 负责目录扫描、远程 API 批量规划、文件移动/重命名与日志撤销；Tauri 2 + 系统 WebView 负责 UI。目前是原界面复刻，**不是直接复用原 Qt 源码，也不保证像素级一致**。
 
-## 新版界面
+## 与原完整版对齐的操作流程
 
-左侧导航分为整理工作台、操作历史和设置。整理工作台包含文件夹扫描、整批 AI 与本地规则模式、可搜索和批量编辑的文件预览、目标分类汇总、安全检查状态。设置支持 API Base URL、模型列表拉取、模型名、临时 API Key、自定义提示词、规则文本、主题和文件夹移动偏好。
+- **主窗口**：原版风格菜单栏、左侧文件资源管理器（导航、展开与拖动宽度）、文件夹路径、文件/目录独立勾选、AI/规则模式、精细/一致分类、白名单、分析按钮与原始文件列表。
+- **审核与确认**：独立审核窗口，八列分别是处理、文件、类型、建议文件名、分类、子分类、校验状态和目标路径；逐项选择、编辑、高亮批量修改、预演、稍后继续、模型异常修复与确认执行。
+- **设置**：OpenAI 兼容 API 地址、模型名称与列表、会话级 API Key、提示词、规则、白名单、深浅主题。规则支持扩展名简写、名称/路径/文件大小/类型字段与正则表达式。
+- **本地文件预览**：主资源管理器和审核窗口均可打开只读文本与图片预览；对图片有 8 MB 限制，对文本仅读取前 128 KiB，不上传正文。
+- **整批 AI**：一次扫描后将所有清单项（名称、类型、大小、已有文件夹）统一打包，单次请求 API 得到 JSON 分类/建议文件名。不会逐文件重复请求。
+- **本地校验与撤销**：重复、遗漏、幻觉、非法路径、目标冲突、源修改检查；Linux 使用 renameat2(RENAME_NOREPLACE)，Windows 使用 MoveFileW；操作前持久化日志，两级目录与文件名改动也可撤销。
 
-## 工作流程
+## 页面与排版（2026-10 原版对齐）
 
-1. 选择文件夹。默认只扫描顶层普通文件（可手动启用顶层文件夹整体移动）。
-2. **AI 整批规划**：将全部文件名/扩展名、大小、类型及现有一级文件夹名一次性发送给 OpenAI 兼容 API；或选择 **本地规则规划**，无需网络。
-3. 逐项审查预览，直接修改分类、搜索、筛选及批量设置；可将项目明确设为保留原位。
-4. 检查模型遗漏、重复、幻觉 ID、非法目录、目标冲突及源文件变化。异常未排除前不允许执行。
-5. 人工确认后移动。对每步移动先写入日志，再以“不覆盖”方式重命名，单步执行成功才标记完成。
-6. 历史页查看每次移动清单或逆序撤销。已变化、冲突项目不会被强行覆盖。
+新版依然使用原 Qt 全功能分支的**信息层级和操作位置**，但不含任何 Qt 动态库。专用样式文件 web/parity.css 只改变 Tauri WebView 的界面，不增加 JS 框架依赖。
 
-## 获取安装包
+- 主窗口按照 **菜单栏 → 左侧可伸缩文件资源管理器 / 右侧路径栏 → 文件与递归选项 → 可展开文档/图片功能区 → AI/规则分类风格与一键整理 → 大面积文件表格 → 底部状态栏** 排列。桌面浏览器面板宽度记忆，长文件名省略显示，保持原版的表格密度。
+- “审核与确认”独立宽弹窗，沿用原 Qt 设计的**八列、固定初始宽度与横向滚动**，支持搜索、按状态筛选、单项勾选、编辑分类/建议名、高亮批量修改、安全状态标记、移动路径预演与撤销。
+- 现代化视觉处理仅针对字体、对比度、间距、文件图标、焦点反馈、阴影和对话框；不会替换为卡片式仪表盘，也不在页面增加冗余的固定解释区域。
+- 快捷键：Ctrl+O 打开文件夹、Ctrl+B 显示/隐藏文件浏览器、Ctrl+R 刷新文件夹；Windows 支持相同组合键，macOS 键盘修饰键在前端自动适配。
 
-[GitHub Actions](https://github.com/lbg2002/ai-file-sorter/actions) → Rust Desktop 工作流 → 选成功的运行 → Artifacts：
+## 尚未与原完整版对齐
 
-- Ubuntu / Debian：DEB、AppImage
-- Windows：NSIS EXE 安装器
+- **递归扫描现已支持**（深度 ≤8 层、单批 ≤600 项），递归整理文件与顶层文件夹整体移动互斥，撤销保留原始相对路径。结构化工程文件夹的自动识别与保护策略仍需继续加强。
+- 图像内容分析、文档正文提取的远程 API 模式尚未移植，相关选项禁用。
+- 音视频元数据改名、完整文件预览缩略图、原版长期学习数据库、完整多语言本地化尚未移植。
+- 白名单现为自定义分类目录列表，尚未达到原版树状智能白名单行为。
+- 需要真实 Linux/Windows 截图、键盘交互测试和稳定性回归，不能视为最终完成。
 
-安装包体积和 CI 成功状态需以真实构建结果为准。首次 Rust 编译会下载大量构建依赖，**构建缓存大小 ≠ 用户安装包体积**。
+**这些是明确的未完成事项，不会用无作用的按钮伪装已经实现。请先在测试文件夹中验证。**
 
-## 本地开发
+## 构建
 
-先安装 Rust stable。Ubuntu 等发行版需 Tauri 2 系统依赖：
+[GitHub Actions](https://github.com/lbg2002/ai-file-sorter/actions) 可查看 original-ui-parity 分支上的 Linux DEB/AppImage 与 Windows NSIS 自动构建。只有工作流真正成功，下载项才可视为构建产物。
+
+Ubuntu 22.04+ / 26.04 环境：
 
     sudo apt install libwebkit2gtk-4.1-dev build-essential \
       libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf
-
-然后执行：
-
     cd src-tauri
-    cargo install tauri-cli --version '^2'
-    cargo tauri icon icons/source.svg
+    # 使用 npm 预编译 Tauri CLI，省去编译 CLI 自身
+    npx --yes @tauri-apps/cli@2 icon icons/source.svg
     cargo test
     cargo run
 
-需要独立包：
+Windows 需要 Rust stable、MSVC C++ Build Tools、WebView2；CI 使用 Node 22 的预编译 Tauri CLI。
 
-    cargo install tauri-cli --version '^2'
-    cargo tauri build --bundles deb,appimage
+**测试建议**：临时目录 → 文件/目录勾选 → 规则/AI 规划 → 编辑子类与文件名 → 预演 → 执行 → 退出重启 → 撤销 → 故意制造冲突检测。
 
-Windows 需 Rust stable、MSVC Build Tools、WebView2；安装 Tauri CLI 后运行 cargo tauri build --bundles nsis。
-
-## 安全边界
-
-- 仅发送清单元数据，不解析或上传文件正文；请勿对敏感文件名使用不可信 API。
-- 600 个顶层项目 / 60,000 字符的单次上限，超过则明确拒绝，不静默截断。
-- 远程接口必须 HTTPS；localhost 允许 HTTP。API Key 仅保留在进程内存，不写入设置和历史。
-- Linux 使用 renameat2(RENAME_NOREPLACE)；Windows 使用 MoveFileW，避免覆盖现有目标文件。
-- 历史记录保存在用户本地应用数据目录下 FileSortLite/history；写入操作意图以支持意外中断后恢复。
-- **撤销不是备份**。文件被编辑、外部程序并发操作、跨设备移动、权限变化等情形可能无法完整恢复。整理重要数据前请另行备份。
-
-采用 [AGPL-3.0](LICENSE) 开源许可。
+本项目沿用 [AGPL-3.0](LICENSE)。感谢原作者 [hyperfield/ai-file-sorter](https://github.com/hyperfield/ai-file-sorter)。

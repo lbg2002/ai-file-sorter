@@ -2,7 +2,7 @@ name: FileSort Lite · Rust Desktop
 
 on:
   push:
-    branches: [rust-ui-rebuild]
+    branches: [rust-ui-rebuild, original-ui-parity]
   pull_request:
   workflow_dispatch:
 
@@ -39,17 +39,21 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf
-      - name: Install Tauri CLI
-        run: cargo install tauri-cli --version '^2'
+      - name: Set up Node for prebuilt Tauri CLI
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - name: Generate desktop icons
         working-directory: src-tauri
-        run: cargo tauri icon icons/source.svg
+        run: npx --yes @tauri-apps/cli@2 icon icons/source.svg
+      - name: Check UI structure and JavaScript syntax
+        run: node scripts/ui-check.mjs
       - name: Test safety core
         working-directory: src-tauri
         run: cargo test
       - name: Build desktop bundle
         working-directory: src-tauri
-        run: cargo tauri build --bundles ${{ matrix.bundles }}
+        run: npx --yes @tauri-apps/cli@2 build --bundles ${{ matrix.bundles }}
       - name: Upload Linux installers
         if: runner.os == 'Linux'
         uses: actions/upload-artifact@v4
