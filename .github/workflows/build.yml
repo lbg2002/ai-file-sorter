@@ -46,6 +46,8 @@ jobs:
       - name: Generate desktop icons
         working-directory: src-tauri
         run: npx --yes @tauri-apps/cli@2 icon icons/source.svg
+      - name: Check UI structure and JavaScript syntax
+        run: node scripts/ui-check.mjs
       - name: Test safety core
         working-directory: src-tauri
         run: cargo test
