@@ -66,10 +66,12 @@ function invalidate() {
   renderAll();
 }
 async function chooseFolder(){
+  let selected=false;
   await run(async()=>{
     const folder=await invoke("pick_folder");
-    if(folder){el("folder-input").value=folder;invalidate();await scanFolder();}
+    if(folder){el("folder-input").value=folder;invalidate();selected=true;}
   },"选择文件夹中");
+  if(selected)await scanFolder();
 }
 async function scanFolder() {
   const folder=el("folder-input").value.trim();
