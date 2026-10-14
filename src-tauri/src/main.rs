@@ -477,9 +477,52 @@ fn browse_directory(folder: String) -> Res<BrowserDirectory> {
     })
 }
 
+
+#[derive(Serialize)]
+#[serde(rename_all="camelCase")]
+struct FilePeek {
+ name: String, bytes:u64, kind:String, content:String, truncated:bool
+}
+#[tauri::command]
+fn file_preview(folder:String,name:String)->Res<FilePeek>{
+ use std::io::Read;
+ if !name_ok(&name){return Err("非法文件名".into());}
+ let base=root(&folder)?;
+ let path=base.join(&name);
+ let meta=fs::symlink_metadata(&path).map_err(|e|e.to_string())?;
+ if meta.file_type().is_symlink()||!meta.is_file(){return Err("不能预览符号链接或目录".into());}
+ let ext=path.extension().and_then(|s|s.to_str()).unwrap_or("").to_lowercase();
+ let mimetype=match ext.as_str(){
+  "png"=>Some("image/png"),"jpg"|"jpeg"=>Some("image/jpeg"),
+  "gif"=>Some("image/gif"),"webp"=>Some("image/webp"),"bmp"=>Some("image/bmp"),_=>None
+ };
+ if let Some(mime)=mimetype {
+  if meta.len()>8*1024*1024{return Err("图像超过 8MB，避免预览造成内存占用".into());}
+  let data=fs::read(&path).map_err(|e|e.to_string())?;
+  use base64::Engine;
+  let encoded=base64::engine::general_purpose::STANDARD.encode(data);
+  return Ok(FilePeek{name,bytes:meta.len(),kind:"image".into(),
+   content:format!("data:{mime};base64,{encoded}"),truncated:false});
+ }
+ if ["txt","md","markdown","csv","log","json","jsonl","yaml","yml","toml","ini","cfg",
+     "py","rs","js","ts","html","css","xml","sh","bat","ps1","cpp","c","h","java",
+     "go","sql","tex"].contains(&ext.as_str()) {
+  let mut file=File::open(&path).map_err(|e|e.to_string())?;
+  let mut data=Vec::new();
+  file.take(128*1024+1).read_to_end(&mut data).map_err(|e|e.to_string())?;
+  let truncated=data.len()>128*1024||meta.len()>128*1024;
+  data.truncate(128*1024);
+  let text=String::from_utf8_lossy(&data).into_owned();
+  return Ok(FilePeek{name,bytes:meta.len(),kind:"text".into(),content:text,truncated});
+ }
+ Ok(FilePeek{name,bytes:meta.len(),kind:"metadata".into(),
+  content:"此文件类型尚不能直接渲染。可通过文件名、大小等元数据整理，文件正文不会被自动上传。".into(),
+  truncated:false})
+}
+
 fn main(){
  tauri::Builder::default().invoke_handler(tauri::generate_handler![
-  load_settings,save_settings,pick_folder,scan_folder,browse_directory,home_directory,preview_plan,plan_by_rules,analyze_folder,fetch_models,apply_plan,list_history,undo_history
+  load_settings,save_settings,pick_folder,scan_folder,browse_directory,home_directory,file_preview,preview_plan,plan_by_rules,analyze_folder,fetch_models,apply_plan,list_history,undo_history
  ]).run(tauri::generate_context!()).expect("FileSort Lite could not start");
 }
 #[cfg(test)]
