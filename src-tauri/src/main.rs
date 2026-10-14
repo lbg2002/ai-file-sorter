@@ -113,6 +113,17 @@ fn secure_rel_path(base:&Path,relative:&str)->Res<PathBuf>{
  }
  Ok(out)
 }
+fn safe_restore_path(base:&Path,relative:&str)->Res<PathBuf>{
+ let components=relative.split('/').collect::<Vec<_>>();
+ if components.is_empty()||components.iter().any(|c|!name_ok(c)){return Err("恢复路径非法".into());}
+ let mut path=base.to_path_buf();
+ for seg in components.iter().take(components.len()-1){
+  path=path.join(seg);
+  let m=fs::symlink_metadata(&path).map_err(|e|format!("恢复父目录缺失：{e}"))?;
+  if m.file_type().is_symlink()||!m.is_dir(){return Err("恢复路径存在危险目录或符号链接".into());}
+ }
+ Ok(path.join(components[components.len()-1]))
+}
 fn source_path(base:&Path,item:&Item)->Res<PathBuf>{
  let relative=if item.source_rel.is_empty(){&item.name}else{&item.source_rel};
  let path=secure_rel_path(base,relative)?;
@@ -281,10 +292,9 @@ fn undo(id:&str)->Res<UndoResult>{
     errors.push(format!("日志目标路径不安全：{}",op.name));continue;
    }
    let rel=if op.source_rel.is_empty(){op.name.as_str()}else{op.source_rel.as_str()};
-   let mut src=dir.clone();
-   let mut valid=true;
-   for c in rel.split('/') {if !name_ok(c){valid=false;break;}src=src.join(c);}
-   if !valid{errors.push(format!("源路径无效：{rel}"));continue;}
+   let src=match safe_restore_path(&dir,rel){
+      Ok(p)=>p,Err(e)=>{errors.push(format!("无法安全恢复 {rel}：{e}"));continue;}
+   };
    let targetdir=if op.category.is_empty(){src.parent().unwrap_or(&dir).to_path_buf()}else{dir.join(&op.category)};
    let dst=targetdir.join(dest_name(&op.name,&op.new_name));
    if (op.state=="moving"||op.state=="restoring")&&fs::symlink_metadata(&src).is_ok()&&fs::symlink_metadata(&dst).is_err(){
@@ -589,6 +599,14 @@ mod tests{
   assert!(rule_matches(&parsed[3],&i,"/tmp"));
   assert!(!rule_matches(&parsed[1],&i,"/tmp"));
   assert!(parse_file_rules("filename | regex | ( -> 论文").is_err());
+ }
+ #[test]fn undo_rejects_symlinked_intermediate_directory(){
+  let uniq=SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+  let base=std::env::temp_dir().join(format!("filesort-safeparent-{}-{uniq}",std::process::id()));
+  fs::create_dir_all(base.join("safe")).unwrap();
+  assert!(safe_restore_path(&base,"../escape").is_err());
+  assert!(safe_restore_path(&base,"safe/note.txt").is_ok());
+  fs::remove_dir_all(base).unwrap();
  }
  #[test]fn recursive_scan_keeps_parent_and_restores_nested_file(){
   let unique=SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
