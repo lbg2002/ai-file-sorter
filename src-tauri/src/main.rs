@@ -279,9 +279,55 @@ fn list_history()->Res<Vec<HistoryRow>>{
 }
 #[tauri::command]
 async fn undo_history(id:String)->Res<UndoResult>{tauri::async_runtime::spawn_blocking(move||undo(&id)).await.map_err(|e|e.to_string())?}
+
+#[derive(Serialize)]
+#[serde(rename_all="camelCase")]
+struct BrowserEntry {
+    name: String,
+    path: String,
+    kind: String,
+    size: u64,
+    modified: String,
+}
+#[derive(Serialize)]
+#[serde(rename_all="camelCase")]
+struct BrowserDirectory {
+    path: String,
+    parent: Option<String>,
+    entries: Vec<BrowserEntry>,
+}
+#[tauri::command]
+fn browse_directory(folder: String) -> Res<BrowserDirectory> {
+    let dir = root(&folder)?;
+    let mut entries = Vec::new();
+    for entry in fs::read_dir(&dir).map_err(|e|e.to_string())? {
+        let entry = match entry {Ok(v)=>v,Err(_)=>continue};
+        let metadata = match fs::symlink_metadata(entry.path()) {Ok(m)=>m,Err(_)=>continue};
+        if metadata.file_type().is_symlink() { continue; }
+        let name = entry.file_name().to_string_lossy().to_string();
+        if name.starts_with('.') {continue;}
+        entries.push(BrowserEntry{
+            name,
+            path: entry.path().to_string_lossy().to_string(),
+            kind: if metadata.is_dir() {"folder"}else{"file"}.into(),
+            size:metadata.len(),
+            modified:metadata.modified().unwrap_or(UNIX_EPOCH).duration_since(UNIX_EPOCH).unwrap_or_default().as_secs().to_string(),
+        });
+    }
+    entries.sort_by(|a,b| {
+        let order=(a.kind != "folder").cmp(&(b.kind != "folder"));
+        order.then(a.name.to_lowercase().cmp(&b.name.to_lowercase()))
+    });
+    Ok(BrowserDirectory{
+        path:dir.to_string_lossy().into_owned(),
+        parent:dir.parent().map(|p|p.to_string_lossy().into_owned()),
+        entries
+    })
+}
+
 fn main(){
  tauri::Builder::default().invoke_handler(tauri::generate_handler![
-  load_settings,save_settings,pick_folder,scan_folder,preview_plan,plan_by_rules,analyze_folder,fetch_models,apply_plan,list_history,undo_history
+  load_settings,save_settings,pick_folder,scan_folder,browse_directory,preview_plan,plan_by_rules,analyze_folder,fetch_models,apply_plan,list_history,undo_history
  ]).run(tauri::generate_context!()).expect("FileSort Lite could not start");
 }
 #[cfg(test)]
