@@ -4,7 +4,7 @@
 <body data-theme="light">
 <div class="window">
   <header class="app-menu" role="menubar">
-    <span class="app-name"><span class="app-logo">▣</span> AI File Sorter Lite</span>
+    <span class="app-name"><span class="app-logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M3.5 6.5a2 2 0 0 1 2-2H10l2 2h6.5a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="m9 13 2.3 2.3L16 10.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>AI File Sorter <em>Lite</em></span></span>
     <button data-menu="file">文件</button><button data-menu="edit">编辑</button><button data-menu="view">视图</button>
     <button data-menu="settings">设置</button><button data-menu="help">帮助</button>
     <div id="menu-popup" class="menu-popup" hidden></div>
@@ -14,6 +14,7 @@
       <div class="explorer-quick" id="quick-locations"></div><div class="explorer-tree" id="explorer-tree"></div>
     </aside><div id="explorer-grip" class="explorer-grip" title="拖动调整宽度"></div>
     <main id="main">
+      <div class="main-controls">
       <div class="folder-line"><label for="folder">文件夹：</label><input id="folder" spellcheck="false">
         <button id="browse-folder">浏览…</button></div>
       <div class="main-options">
@@ -22,12 +23,21 @@
         <label><input id="include-folders" type="checkbox">分类文件夹</label>
         <label title="递归扫描子目录内的文件，与整体移动顶层文件夹互斥"><input id="recursive" type="checkbox">包含子目录中的文件</label>
       </div>
-      <div class="extra-row">
-        <label title="使用远程多模态 API 分析图像内容，启用后可能发送图像数据"><input id="picture-analysis" type="checkbox" disabled>按图片内容分析 <small>（多模态 API 接入中）</small></label>
+      <div class="advanced-options" aria-label="内容分析及命名选项">
+        <details class="option-disclosure">
+          <summary><span class="disclosure-chevron">›</span><span>文档分析与重命名</span><span class="option-subtle">远程 API 适配中</span></summary>
+          <div class="option-details"><label><input id="document-analysis" type="checkbox" disabled>按文档内容分析</label><label><input type="checkbox" disabled>只分析文档</label><label><input type="checkbox" disabled>为文档建议文件名</label><span class="option-footnote">当前仅使用文件名等元数据分类，不上传文档正文。</span></div>
+        </details>
+        <details class="option-disclosure">
+          <summary><span class="disclosure-chevron">›</span><span>图片分析与重命名</span><span class="option-subtle">远程 API 适配中</span></summary>
+          <div class="option-details"><label><input id="picture-analysis" type="checkbox" disabled>按图片内容分析</label><label><input type="checkbox" disabled>只分析图片</label><label><input type="checkbox" disabled>使用拍摄日期命名</label><span class="option-footnote">图片预览已支持；图片理解和 EXIF 命名尚未接入。</span></div>
+        </details>
+        <details class="option-disclosure">
+          <summary><span class="disclosure-chevron">›</span><span>音视频文件命名</span><span class="option-subtle">适配中</span></summary>
+          <div class="option-details"><label><input type="checkbox" disabled>根据音视频元数据建议文件名</label><span class="option-footnote">保留原版入口，尚未接入相关解析功能。</span></div>
+        </details>
       </div>
-      <div class="extra-row"><label title="启用后需要文档文本提取"><input id="document-analysis" type="checkbox" disabled>按文档内容分析 <small>（API 文本提取接入中）</small></label></div>
-      <div class="extra-row"><label title="从文件元数据中提取日期与名称"><input type="checkbox" disabled>根据音视频元数据建议文件名 <small>（待实现）</small></label></div>
-      <div class="control-zone">
+      <div class="control-zone"><div class="control-zone-label">分类与整理</div>
         <div class="control-cluster">
           <div class="section-label">整理模式</div>
           <div class="radio-line"><label><input name="organize-mode" type="radio" value="ai" checked> AI 模式</label><label><input name="organize-mode" type="radio" value="rules"> 规则模式</label></div>
@@ -35,9 +45,10 @@
           <div class="radio-line"><label><input name="style" type="radio" value="refined" checked>更精细</label><label><input name="style" type="radio" value="consistent">更一致</label></div>
           <div class="whitelist-line"><label><input id="use-whitelist" type="checkbox">使用白名单</label><select id="whitelist-choice" disabled></select></div>
         </div>
-        <div class="analyze-zone"><button class="main-action" id="analyze">▶ 一键分析文件夹</button></div>
+        <div class="analyze-zone"><button class="main-action" id="analyze"><span class="action-spark">✦</span> 一键分析文件夹</button><div class="analyze-caption">批量生成方案，执行前人工审核</div></div>
       </div>
-      <div class="view-tools"><div class="view-label" id="view-title">当前文件夹内容</div>
+      </div><!-- main-controls -->
+      <div class="view-tools"><div class="view-label"><span class="view-accent" aria-hidden="true"></span><strong id="view-title">当前文件夹内容</strong><span class="view-hint">双击文件预览 · 双击文件夹进入</span></div>
         <div class="view-actions"><button id="back-folder" title="上级目录">↑</button><button id="refresh-folder" title="刷新">↻</button><button id="switch-results" title="切换原始文件列表与分类结果">⇄ 分类结果</button></div>
       </div>
       <div class="content-table" id="list-panel">
@@ -51,14 +62,14 @@
 
 <div class="overlay" id="review-overlay" hidden>
   <section class="dialog review-dialog" role="dialog" aria-modal="true" aria-labelledby="review-title">
-    <header class="dialog-title"><strong id="review-title">审核与确认 · AI File Sorter Lite</strong><button id="close-review" title="关闭">×</button></header>
+    <header class="dialog-title"><strong id="review-title">审核与确认 <span class="dialog-subtitle">· 文件整理方案</span></strong><button id="close-review" title="关闭">×</button></header>
     <div class="review-content">
       <div class="review-toolbar">
         <label><input id="review-all" type="checkbox" checked>全选</label>
         <button id="select-highlighted">选择高亮项</button><button id="bulk-edit">编辑选中项…</button><button id="repair-result" hidden>检查并修复清单异常…</button>
         <label title="建议文件名需人工审核"><input id="approve-filenames" type="checkbox">自动选择建议重命名</label><label title="模型建议仅经过校验后可执行"><input id="approve-categories" type="checkbox" checked>自动选择安全分类</label>
       </div>
-      <div class="review-options"><label><input id="review-subcats" type="checkbox">创建子分类文件夹</label>
+      <div class="review-options"><div class="review-filter-tools"><label class="review-search-wrap"><span aria-hidden="true">⌕</span><input id="review-search" type="search" placeholder="搜索文件名、分类或路径" autocomplete="off"></label><select id="review-status-filter" aria-label="筛选校验状态"><option value="all">全部状态</option><option value="move">待执行</option><option value="keep">保留原位</option><option value="error">异常</option></select><span id="review-visible-count" class="review-visible-count"></span></div><label><input id="review-subcats" type="checkbox">创建子分类文件夹</label>
         <label><input id="dry-run" type="checkbox">预演（仅预览，不移动文件）</label>
         <span id="review-summary"></span>
       </div>
@@ -67,7 +78,7 @@
         <thead><tr><th>处理</th><th>文件</th><th>类型</th><th>建议文件名</th><th>分类</th><th>子分类</th><th>校验状态</th><th>目标路径</th></tr></thead>
         <tbody id="review-rows"></tbody>
       </table></div>
-      <div class="review-tip">双击或直接编辑建议文件名、分类和子分类；未勾选的项目保持原位。</div>
+      <div class="review-tip"><span class="tip-icon">ⓘ</span> 可编辑建议文件名、分类和子分类；未勾选的项目保留原位。双击文件可打开预览。</div>
     </div>
     <footer class="dialog-footer"><span id="review-footnote"></span>
       <button id="btn-dry-preview">预览移动路径</button>
